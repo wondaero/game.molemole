@@ -38,7 +38,22 @@ function initGrid() {
             </div>
         `;
 
+        const hammer = document.createElement('div');
+        hammer.className = 'hammer';
+        hammer.innerHTML = '<div class="hammer-head"></div><div class="hammer-handle"></div>';
+
+        const burst = document.createElement('div');
+        burst.className = 'hit-burst';
+        for (let r = 0; r < 8; r++) {
+            const ray = document.createElement('div');
+            ray.className = 'burst-ray';
+            ray.style.setProperty('--i', r);
+            burst.appendChild(ray);
+        }
+
         cell.appendChild(mole);
+        cell.appendChild(hammer);
+        cell.appendChild(burst);
         cell.addEventListener('click', () => handleClick(i));
         grid.appendChild(cell);
     }
@@ -46,9 +61,12 @@ function initGrid() {
 
 // 난이도에 따른 제한 시간
 function getTimeLimit() {
-    if (score >= 20) return 0.5;
-    if (score >= 10) return 0.65;
-    return 0.8;
+    if (score >= 31) return Math.max(0.1, parseFloat((0.4 - (score - 30) * 0.001).toFixed(3)));
+    if (score >= 21) return 0.4;
+    if (score >= 16) return 0.5;
+    if (score >= 11) return 0.8;
+    if (score >= 6) return 1.0;
+    return 1.5;
 }
 
 // 랜덤 위치 3개 선택
@@ -114,6 +132,18 @@ function handleClick(index) {
     const mole = cell.querySelector('.mole');
 
     if (!mole.classList.contains('show')) return;
+
+    // 망치 애니메이션
+    const hammer = cell.querySelector('.hammer');
+    hammer.classList.remove('hit');
+    void hammer.offsetWidth;
+    hammer.classList.add('hit');
+
+    // 히트 이펙트
+    const burst = cell.querySelector('.hit-burst');
+    burst.classList.remove('pop');
+    void burst.offsetWidth;
+    burst.classList.add('pop');
 
     clearTimeout(turnTimer);
 
