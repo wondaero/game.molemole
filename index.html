@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>몰래몰레 - 두더지 잡기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a472a 0%, #2d5016 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #fff;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+
+        .info-bar {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            color: #fff;
+            font-size: 1.2rem;
+        }
+
+        .info-item {
+            background: rgba(0,0,0,0.3);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        .game-container {
+            background: #8B4513;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(4, 100px);
+            grid-template-rows: repeat(4, 100px);
+            gap: 10px;
+        }
+
+        .cell {
+            background: #654321;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+            transition: transform 0.1s;
+        }
+
+        .cell:hover {
+            transform: scale(1.05);
+        }
+
+        .mole {
+            position: absolute;
+            bottom: -100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 80px;
+            transition: bottom 0.15s ease-out;
+        }
+
+        .mole.show {
+            bottom: 5px;
+        }
+
+        .mole-body {
+            width: 70px;
+            height: 60px;
+            background: #8B4513;
+            border-radius: 50% 50% 40% 40%;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 3px solid #5D3A1A;
+        }
+
+        .mole-face {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 40px;
+        }
+
+        .mole-eye {
+            width: 10px;
+            height: 10px;
+            background: #000;
+            border-radius: 50%;
+            position: absolute;
+            top: 5px;
+        }
+
+        .mole-eye.left { left: 8px; }
+        .mole-eye.right { right: 8px; }
+
+        .mole-nose {
+            width: 15px;
+            height: 12px;
+            background: #FF6B6B;
+            border-radius: 50%;
+            position: absolute;
+            top: 18px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* 스파이 두더지 - 선글라스 착용 */
+        .mole.spy .mole-body {
+            background: #6B4423;
+        }
+
+        .spy-glasses {
+            display: none;
+            position: absolute;
+            top: 3px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 45px;
+            height: 15px;
+        }
+
+        .mole.spy .spy-glasses {
+            display: block;
+        }
+
+        .glass {
+            width: 18px;
+            height: 12px;
+            background: #000;
+            border-radius: 3px;
+            position: absolute;
+            top: 0;
+        }
+
+        .glass.left { left: 0; }
+        .glass.right { right: 0; }
+
+        .glass-bridge {
+            width: 8px;
+            height: 3px;
+            background: #000;
+            position: absolute;
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .mole.spy .mole-eye {
+            display: none;
+        }
+
+        .start-screen, .end-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            color: #fff;
+        }
+
+        .start-screen h2, .end-screen h2 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .start-screen p, .end-screen p {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .btn {
+            margin-top: 30px;
+            padding: 15px 50px;
+            font-size: 1.5rem;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        .stats {
+            background: rgba(255,255,255,0.1);
+            padding: 20px 40px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        .stats p {
+            font-size: 1.3rem;
+            margin: 10px 0;
+        }
+
+        .stats span {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .rules {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            text-align: left;
+        }
+
+        .rules h3 {
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        .rules ul {
+            list-style-position: inside;
+        }
+
+        .rules li {
+            margin: 5px 0;
+        }
+
+        .mole-demo {
+            display: flex;
+            gap: 30px;
+            margin: 20px 0;
+            justify-content: center;
+        }
+
+        .demo-item {
+            text-align: center;
+        }
+
+        .demo-mole {
+            width: 60px;
+            height: 60px;
+            position: relative;
+            margin: 0 auto 10px;
+        }
+
+        .demo-mole .mole-body {
+            width: 50px;
+            height: 45px;
+        }
+
+        .demo-mole .mole-face {
+            width: 40px;
+            height: 35px;
+        }
+
+        .demo-mole .mole-eye {
+            width: 8px;
+            height: 8px;
+            top: 3px;
+        }
+
+        .demo-mole .mole-eye.left { left: 5px; }
+        .demo-mole .mole-eye.right { right: 5px; }
+
+        .demo-mole .mole-nose {
+            width: 12px;
+            height: 10px;
+            top: 14px;
+        }
+
+        .demo-mole .spy-glasses {
+            width: 35px;
+            height: 12px;
+            top: 1px;
+        }
+
+        .demo-mole .glass {
+            width: 14px;
+            height: 10px;
+        }
+
+        .demo-mole .glass-bridge {
+            width: 6px;
+            height: 2px;
+            top: 4px;
+        }
+
+        .demo-label {
+            font-size: 0.9rem;
+        }
+
+        .demo-label.good { color: #4CAF50; }
+        .demo-label.bad { color: #f44336; }
+    </style>
+</head>
+<body>
+    <!-- 시작 화면 -->
+    <div class="start-screen" id="startScreen">
+        <h2>몰래몰레</h2>
+        <p>두더지를 잡아라! 하지만 스파이를 조심해!</p>
+
+        <div class="mole-demo">
+            <div class="demo-item">
+                <div class="demo-mole">
+                    <div class="mole-body">
+                        <div class="mole-face">
+                            <div class="mole-eye left"></div>
+                            <div class="mole-eye right"></div>
+                            <div class="mole-nose"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="demo-label good">일반 두더지 (클릭!)</div>
+            </div>
+            <div class="demo-item">
+                <div class="demo-mole spy">
+                    <div class="mole-body">
+                        <div class="mole-face">
+                            <div class="spy-glasses">
+                                <div class="glass left"></div>
+                                <div class="glass right"></div>
+                                <div class="glass-bridge"></div>
+                            </div>
+                            <div class="mole-eye left"></div>
+                            <div class="mole-eye right"></div>
+                            <div class="mole-nose"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="demo-label bad">스파이 두더지 (피해!)</div>
+            </div>
+        </div>
+
+        <div class="rules">
+            <h3>게임 규칙</h3>
+            <ul>
+                <li>매 턴 두더지 3마리 등장 (일반 2 + 스파이 1)</li>
+                <li>일반 두더지 1마리만 클릭하세요</li>
+                <li>스파이 두더지(선글라스)를 클릭하면 게임 오버!</li>
+                <li>시간 내에 클릭하지 못하면 게임 오버!</li>
+            </ul>
+        </div>
+
+        <button class="btn" onclick="startGame()">게임 시작</button>
+    </div>
+
+    <!-- 게임 종료 화면 -->
+    <div class="end-screen hidden" id="endScreen">
+        <h2>게임 오버!</h2>
+        <p id="endReason"></p>
+        <div class="stats">
+            <p>총 점수: <span id="finalScore">0</span>점</p>
+            <p>평균 반응속도: <span id="avgReaction">0</span>ms</p>
+            <p>최고 반응속도: <span id="bestReaction">0</span>ms</p>
+        </div>
+        <button class="btn" onclick="startGame()">다시 시작</button>
+    </div>
+
+    <!-- 게임 화면 -->
+    <h1>몰래몰레</h1>
+    <div class="info-bar">
+        <div class="info-item">점수: <span id="score">0</span></div>
+        <div class="info-item">제한시간: <span id="timeLimit">0.8</span>초</div>
+    </div>
+    <div class="game-container">
+        <div class="grid" id="grid"></div>
+    </div>
+
+    <script>
+        // 게임 상태
+        let score = 0;
+        let reactionTimes = [];
+        let moleAppearTime = 0;
+        let gameActive = false;
+        let turnTimer = null;
+        let nextTurnTimer = null;
+
+        // DOM 요소
+        const grid = document.getElementById('grid');
+        const scoreDisplay = document.getElementById('score');
+        const timeLimitDisplay = document.getElementById('timeLimit');
+        const startScreen = document.getElementById('startScreen');
+        const endScreen = document.getElementById('endScreen');
+
+        // 그리드 초기화
+        function initGrid() {
+            grid.innerHTML = '';
+            for (let i = 0; i < 16; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+
+                const mole = document.createElement('div');
+                mole.className = 'mole';
+                mole.innerHTML = `
+                    <div class="mole-body">
+                        <div class="mole-face">
+                            <div class="spy-glasses">
+                                <div class="glass left"></div>
+                                <div class="glass right"></div>
+                                <div class="glass-bridge"></div>
+                            </div>
+                            <div class="mole-eye left"></div>
+                            <div class="mole-eye right"></div>
+                            <div class="mole-nose"></div>
+                        </div>
+                    </div>
+                `;
+
+                cell.appendChild(mole);
+                cell.addEventListener('click', () => handleClick(i));
+                grid.appendChild(cell);
+            }
+        }
+
+        // 난이도에 따른 제한 시간
+        function getTimeLimit() {
+            if (score >= 20) return 0.5;
+            if (score >= 10) return 0.65;
+            return 0.8;
+        }
+
+        // 랜덤 위치 3개 선택
+        function getRandomPositions() {
+            const positions = [];
+            while (positions.length < 3) {
+                const pos = Math.floor(Math.random() * 16);
+                if (!positions.includes(pos)) {
+                    positions.push(pos);
+                }
+            }
+            return positions;
+        }
+
+        // 두더지 등장
+        function showMoles() {
+            if (!gameActive) return;
+
+            const positions = getRandomPositions();
+            const spyIndex = Math.floor(Math.random() * 3); // 스파이 위치
+
+            const cells = document.querySelectorAll('.cell');
+            const moles = document.querySelectorAll('.mole');
+
+            // 모든 두더지 숨기기
+            moles.forEach(mole => {
+                mole.classList.remove('show', 'spy', 'normal');
+                mole.dataset.type = '';
+            });
+
+            // 선택된 위치에 두더지 표시
+            positions.forEach((pos, idx) => {
+                const mole = cells[pos].querySelector('.mole');
+                mole.classList.add('show');
+
+                if (idx === spyIndex) {
+                    mole.classList.add('spy');
+                    mole.dataset.type = 'spy';
+                } else {
+                    mole.classList.add('normal');
+                    mole.dataset.type = 'normal';
+                }
+            });
+
+            moleAppearTime = Date.now();
+
+            // 제한 시간 타이머
+            const timeLimit = getTimeLimit();
+            timeLimitDisplay.textContent = timeLimit;
+
+            turnTimer = setTimeout(() => {
+                if (gameActive) {
+                    endGame('시간 초과! 두더지를 클릭하지 못했습니다.');
+                }
+            }, timeLimit * 1000);
+        }
+
+        // 클릭 처리
+        function handleClick(index) {
+            if (!gameActive) return;
+
+            const cell = document.querySelectorAll('.cell')[index];
+            const mole = cell.querySelector('.mole');
+
+            if (!mole.classList.contains('show')) return;
+
+            clearTimeout(turnTimer);
+
+            const reactionTime = Date.now() - moleAppearTime;
+
+            if (mole.dataset.type === 'spy') {
+                endGame('스파이 두더지를 클릭했습니다!');
+                return;
+            }
+
+            if (mole.dataset.type === 'normal') {
+                // 성공
+                score++;
+                scoreDisplay.textContent = score;
+                reactionTimes.push(reactionTime);
+
+                // 모든 두더지 숨기기
+                document.querySelectorAll('.mole').forEach(m => {
+                    m.classList.remove('show', 'spy', 'normal');
+                    m.dataset.type = '';
+                });
+
+                // 다음 턴 (2~5초 후)
+                const nextDelay = 2000 + Math.random() * 3000;
+                nextTurnTimer = setTimeout(showMoles, nextDelay);
+            }
+        }
+
+        // 게임 시작
+        function startGame() {
+            score = 0;
+            reactionTimes = [];
+            gameActive = true;
+
+            scoreDisplay.textContent = '0';
+            timeLimitDisplay.textContent = '0.8';
+
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+
+            initGrid();
+
+            // 첫 두더지 등장 (2~5초 후)
+            const firstDelay = 2000 + Math.random() * 3000;
+            nextTurnTimer = setTimeout(showMoles, firstDelay);
+        }
+
+        // 게임 종료
+        function endGame(reason) {
+            gameActive = false;
+            clearTimeout(turnTimer);
+            clearTimeout(nextTurnTimer);
+
+            // 통계 계산
+            const avgReaction = reactionTimes.length > 0
+                ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
+                : 0;
+            const bestReaction = reactionTimes.length > 0
+                ? Math.min(...reactionTimes)
+                : 0;
+
+            document.getElementById('endReason').textContent = reason;
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('avgReaction').textContent = avgReaction;
+            document.getElementById('bestReaction').textContent = bestReaction;
+
+            endScreen.classList.remove('hidden');
+        }
+
+        // 초기화
+        initGrid();
+    </script>
+</body>
+</html>
