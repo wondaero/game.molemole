@@ -1,0 +1,321 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1a472a 0%, #2d5016 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+h1 {
+    color: #fff;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+    margin-bottom: 10px;
+    font-size: 2.5rem;
+}
+
+.info-bar {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 20px;
+    color: #fff;
+    font-size: 1.2rem;
+}
+
+.info-item {
+    background: rgba(0,0,0,0.3);
+    padding: 10px 20px;
+    border-radius: 10px;
+}
+
+.game-container {
+    background: #8B4513;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 100px);
+    grid-template-rows: repeat(4, 100px);
+    gap: 10px;
+}
+
+.cell {
+    background: #654321;
+    border-radius: 50%;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+    transition: transform 0.1s;
+}
+
+.cell:hover {
+    transform: scale(1.05);
+}
+
+.mole {
+    position: absolute;
+    bottom: -100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 80px;
+    transition: bottom 0.15s ease-out;
+}
+
+.mole.show {
+    bottom: 5px;
+}
+
+.mole-body {
+    width: 70px;
+    height: 60px;
+    background: #8B4513;
+    border-radius: 50% 50% 40% 40%;
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 3px solid #5D3A1A;
+}
+
+.mole-face {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50px;
+    height: 40px;
+}
+
+.mole-eye {
+    width: 10px;
+    height: 10px;
+    background: #000;
+    border-radius: 50%;
+    position: absolute;
+    top: 5px;
+}
+
+.mole-eye.left { left: 8px; }
+.mole-eye.right { right: 8px; }
+
+.mole-nose {
+    width: 15px;
+    height: 12px;
+    background: #FF6B6B;
+    border-radius: 50%;
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* 스파이 두더지 - 선글라스 착용 */
+.mole.spy .mole-body {
+    background: #6B4423;
+}
+
+.spy-glasses {
+    display: none;
+    position: absolute;
+    top: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 45px;
+    height: 15px;
+}
+
+.mole.spy .spy-glasses {
+    display: block;
+}
+
+.glass {
+    width: 18px;
+    height: 12px;
+    background: #000;
+    border-radius: 3px;
+    position: absolute;
+    top: 0;
+}
+
+.glass.left { left: 0; }
+.glass.right { right: 0; }
+
+.glass-bridge {
+    width: 8px;
+    height: 3px;
+    background: #000;
+    position: absolute;
+    top: 5px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.mole.spy .mole-eye {
+    display: none;
+}
+
+.start-screen, .end-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    color: #fff;
+}
+
+.start-screen h2, .end-screen h2 {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+
+.start-screen p, .end-screen p {
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+    text-align: center;
+    max-width: 400px;
+}
+
+.btn {
+    margin-top: 30px;
+    padding: 15px 50px;
+    font-size: 1.5rem;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn:hover {
+    background: #45a049;
+    transform: scale(1.05);
+}
+
+.stats {
+    background: rgba(255,255,255,0.1);
+    padding: 20px 40px;
+    border-radius: 15px;
+    margin-top: 20px;
+}
+
+.stats p {
+    font-size: 1.3rem;
+    margin: 10px 0;
+}
+
+.stats span {
+    color: #4CAF50;
+    font-weight: bold;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.rules {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    text-align: left;
+}
+
+.rules h3 {
+    margin-bottom: 10px;
+    color: #4CAF50;
+}
+
+.rules ul {
+    list-style-position: inside;
+}
+
+.rules li {
+    margin: 5px 0;
+}
+
+.mole-demo {
+    display: flex;
+    gap: 30px;
+    margin: 20px 0;
+    justify-content: center;
+}
+
+.demo-item {
+    text-align: center;
+}
+
+.demo-mole {
+    width: 60px;
+    height: 60px;
+    position: relative;
+    margin: 0 auto 10px;
+}
+
+.demo-mole .mole-body {
+    width: 50px;
+    height: 45px;
+}
+
+.demo-mole .mole-face {
+    width: 40px;
+    height: 35px;
+}
+
+.demo-mole .mole-eye {
+    width: 8px;
+    height: 8px;
+    top: 3px;
+}
+
+.demo-mole .mole-eye.left { left: 5px; }
+.demo-mole .mole-eye.right { right: 5px; }
+
+.demo-mole .mole-nose {
+    width: 12px;
+    height: 10px;
+    top: 14px;
+}
+
+.demo-mole .spy-glasses {
+    width: 35px;
+    height: 12px;
+    top: 1px;
+}
+
+.demo-mole .glass {
+    width: 14px;
+    height: 10px;
+}
+
+.demo-mole .glass-bridge {
+    width: 6px;
+    height: 2px;
+    top: 4px;
+}
+
+.demo-label {
+    font-size: 0.9rem;
+}
+
+.demo-label.good { color: #4CAF50; }
+.demo-label.bad { color: #f44336; }
