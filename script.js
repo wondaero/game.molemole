@@ -57,6 +57,7 @@ let gameActive = false;
 let turnTimer = null;
 let nextTurnTimer = null;
 let isSlowMo = false;
+let slowMoTimers = [];
 
 // DOM 요소
 const grid = document.getElementById('grid');
@@ -230,62 +231,71 @@ function handleClick(index) {
     const REMAINING_TO_HIT = 23;                          // 1/3→40% 잔여 (ms, 정상속도)
     const HIT_WALL = SLOW_START + Math.ceil(REMAINING_TO_HIT / SLOW_RATE); // ~347ms
 
-    // 1/3 지점: 갑자기 슬로우
-    setTimeout(() => {
-        document.getAnimations().forEach(anim => { anim.playbackRate = SLOW_RATE; });
-        SFX.setBGMRate(SLOW_RATE);
-    }, SLOW_START);
+    slowMoTimers = [
+        // 1/3 지점: 갑자기 슬로우
+        setTimeout(() => {
+            document.getAnimations().forEach(anim => { anim.playbackRate = SLOW_RATE; });
+            SFX.setBGMRate(SLOW_RATE);
+        }, SLOW_START),
 
-    // 히트 지점: 정상 복귀 + 이펙트 발동
-    setTimeout(() => {
-        document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
-        SFX.setBGMRate(1);
-        isSpy ? SFX.hitSpy() : SFX.hitNormal();
+        // 히트 지점: 정상 복귀 + 이펙트 발동
+        setTimeout(() => {
+            document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
+            SFX.setBGMRate(1);
+            isSpy ? SFX.hitSpy() : SFX.hitNormal();
 
-        const burst = cell.querySelector('.hit-burst');
-        burst.classList.remove('pop');
-        void burst.offsetWidth;
-        burst.classList.add('pop');
+            const burst = cell.querySelector('.hit-burst');
+            burst.classList.remove('pop');
+            void burst.offsetWidth;
+            burst.classList.add('pop');
 
-        stars.classList.remove('active');
-        void stars.offsetWidth;
-        stars.classList.add('active');
-    }, HIT_WALL);
+            stars.classList.remove('active');
+            void stars.offsetWidth;
+            stars.classList.add('active');
+        }, HIT_WALL),
 
-    // 이펙트 완료 후 정리 (stars: 0.65s, burst: 0.3s)
-    setTimeout(() => {
-        isSlowMo = false;
-        cell.style.zIndex = '';
+        // 이펙트 완료 후 정리 (stars: 0.65s, burst: 0.3s)
+        setTimeout(() => {
+            isSlowMo = false;
+            cell.style.zIndex = '';
 
-        document.querySelectorAll('.mole').forEach(m => {
-            m.classList.remove('show', 'spy', 'normal');
-            m.dataset.type = '';
-        });
+            document.querySelectorAll('.mole').forEach(m => {
+                m.classList.remove('show', 'spy', 'normal');
+                m.dataset.type = '';
+            });
 
-        if (isSpy) {
-            SFX.gameOver();
-            endGame('스파이 두더지를 클릭했습니다!');
-            return;
-        }
+            if (isSpy) {
+                SFX.gameOver();
+                endGame('스파이 두더지를 클릭했습니다!');
+                return;
+            }
 
-        score++;
-        scoreDisplay.textContent = score;
-        reactionTimes.push(reactionTime);
+            score++;
+            scoreDisplay.textContent = score;
+            reactionTimes.push(reactionTime);
 
-        const nextDelay = 2000 + Math.random() * 3000;
-        nextTurnTimer = setTimeout(showMoles, nextDelay);
-    }, HIT_WALL + 900);
+            const nextDelay = 2000 + Math.random() * 3000;
+            nextTurnTimer = setTimeout(showMoles, nextDelay);
+        }, HIT_WALL + 900),
+    ];
 }
 
 // 게임 시작
 function startGame() {
+    // 혹시 남아있는 타이머 전부 정리
+    clearTimeout(turnTimer);
+    clearTimeout(nextTurnTimer);
+    slowMoTimers.forEach(clearTimeout);
+    slowMoTimers = [];
+    document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
+
     score = 0;
     reactionTimes = [];
     gameActive = true;
     isSlowMo = false;
 
     scoreDisplay.textContent = '0';
-    timeLimitDisplay.textContent = '0.8';
+    timeLimitDisplay.textContent = getTimeLimit();
     updateBestDisplay();
 
     startScreen.classList.add('hidden');
@@ -302,8 +312,12 @@ function startGame() {
 // 게임 종료
 function endGame(reason) {
     gameActive = false;
+    isSlowMo = false;
     clearTimeout(turnTimer);
     clearTimeout(nextTurnTimer);
+    slowMoTimers.forEach(clearTimeout);
+    slowMoTimers = [];
+    document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
     SFX.stopBGM();
 
     // 통계 계산
@@ -334,6 +348,13 @@ function endGame(reason) {
     updateBestDisplay();
     endScreen.classList.remove('hidden');
 }
+
+// 탭 이탈 시 게임 종료
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && gameActive) {
+        endGame('게임 화면을 벗어났습니다.');
+    }
+});
 
 // 초기화
 updateBestDisplay();
