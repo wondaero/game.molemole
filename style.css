@@ -207,7 +207,7 @@ h1 {
 }
 
 .hit-burst.pop .burst-ray {
-    animation: rayBurst 0.3s ease-out 0.13s forwards;
+    animation: rayBurst 0.3s ease-out forwards;
 }
 
 @keyframes rayBurst {
@@ -238,7 +238,7 @@ h1 {
 }
 
 .spin-stars.active .star-orbit {
-    animation: starSpin 0.65s ease-out 0.13s forwards;
+    animation: starSpin 0.65s ease-out forwards;
 }
 
 .star-icon {
@@ -362,6 +362,18 @@ h1 {
 
 .hidden {
     display: none !important;
+}
+
+.new-record {
+    color: #FFD700;
+    font-weight: bold;
+    font-size: 1.5rem !important;
+    animation: recordPulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes recordPulse {
+    from { transform: scale(1); }
+    to   { transform: scale(1.08); }
 }
 
 .rules {

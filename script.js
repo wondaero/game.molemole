@@ -1,4 +1,55 @@
-// 게임 상태
+// ─── 사운드 시스템 (구멍 - 파일 연결 시 구현) ────────────────────────────────
+const SFX = {
+    // TODO: 배경음악 (HTMLAudioElement 또는 Web Audio API AudioBuffer)
+    // bgm: new Audio('sounds/bgm.mp3'),
+
+    // 배경음 재생 (게임 시작 시 호출)
+    playBGM() { /* TODO */ },
+
+    // 배경음 정지 (게임 종료 시 호출)
+    stopBGM() { /* TODO */ },
+
+    // 슬로우모션 시 배경음 속도 조절 (rate: 0~1 = 슬로우, 1 = 정상)
+    setBGMRate(_rate) { /* TODO: bgm.playbackRate = _rate */ },
+
+    // 두더지 등장음
+    moleAppear() { /* TODO */ },
+
+    // 일반 두더지 타격음
+    hitNormal() { /* TODO */ },
+
+    // 스파이 두더지 타격음
+    hitSpy() { /* TODO */ },
+
+    // 시간 초과 / 게임 오버 음
+    gameOver() { /* TODO */ },
+};
+
+// ─── 최고 기록 (localStorage) ─────────────────────────────────────────────────
+const STORAGE_KEY = 'molemole_best';
+
+function loadBest() {
+    try {
+        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null;
+    } catch { return null; }
+}
+
+function saveBest(score) {
+    const prev = loadBest();
+    if (!prev || score > prev.score) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ score }));
+        return true; // 신기록
+    }
+    return false;
+}
+
+function updateBestDisplay() {
+    const best = loadBest();
+    const el = document.getElementById('bestScore');
+    if (el) el.textContent = best ? best.score : '-';
+}
+
+// ─── 게임 상태 ────────────────────────────────────────────────────────────────
 let score = 0;
 let reactionTimes = [];
 let moleAppearTime = 0;
@@ -129,12 +180,15 @@ function showMoles() {
 
     moleAppearTime = Date.now();
 
+    SFX.moleAppear();
+
     // 제한 시간 타이머
     const timeLimit = getTimeLimit();
     timeLimitDisplay.textContent = timeLimit;
 
     turnTimer = setTimeout(() => {
         if (gameActive) {
+            SFX.gameOver();
             endGame('시간 초과! 두더지를 클릭하지 못했습니다.');
         }
     }, timeLimit * 1000);
@@ -154,59 +208,62 @@ function handleClick(index) {
     const reactionTime = Date.now() - moleAppearTime;
     const isSpy = mole.dataset.type === 'spy';
 
-    // 망치 애니메이션
+    // 별/물음표 아이콘 미리 설정
+    const stars = cell.querySelector('.spin-stars');
+    stars.querySelectorAll('.star-icon').forEach(icon => {
+        icon.textContent = isSpy ? '?' : '★';
+    });
+
+    // 망치 애니메이션 시작 (정상 속도)
     const hammer = cell.querySelector('.hammer');
     hammer.classList.remove('hit');
     void hammer.offsetWidth;
     hammer.classList.add('hit');
 
-    // 히트 이펙트 + 별
-    const burst = cell.querySelector('.hit-burst');
-    burst.classList.remove('pop');
-    void burst.offsetWidth;
-    burst.classList.add('pop');
-
-    const stars = cell.querySelector('.spin-stars');
-    stars.querySelectorAll('.star-icon').forEach(icon => {
-        icon.textContent = isSpy ? '?' : '★';
-    });
-    stars.classList.remove('active');
-    void stars.offsetWidth;
-    stars.classList.add('active');
-
     // 클릭된 셀을 최상위로 (인접 셀에 가려지지 않게)
     cell.style.zIndex = '100';
-
-    // 슬로우 모션: 순간정지 → 슬로우 → 복귀
     isSlowMo = true;
-    const SLOW_RATE = 0.18;
-    const FREEZE_MS = 80;
-    const SLOW_DURATION = FREEZE_MS + Math.ceil(0.78 / SLOW_RATE * 1000) + 400;
 
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            // 순간 정지
-            document.getAnimations().forEach(anim => { anim.playbackRate = 0; });
-            setTimeout(() => {
-                // 슬로우 모션 재개
-                document.getAnimations().forEach(anim => { anim.playbackRate = SLOW_RATE; });
-            }, FREEZE_MS);
-        });
-    });
+    // 타이밍: 망치 총 0.35s, 히트 = 40%(140ms), 슬로우 시작 = 1/3(117ms)
+    const SLOW_RATE = 0.1;
+    const SLOW_START = 117;                                // 정상속도로 1/3 지점 (ms)
+    const REMAINING_TO_HIT = 23;                          // 1/3→40% 잔여 (ms, 정상속도)
+    const HIT_WALL = SLOW_START + Math.ceil(REMAINING_TO_HIT / SLOW_RATE); // ~347ms
 
+    // 1/3 지점: 갑자기 슬로우
     setTimeout(() => {
-        // 정상 속도 복귀
+        document.getAnimations().forEach(anim => { anim.playbackRate = SLOW_RATE; });
+        SFX.setBGMRate(SLOW_RATE);
+    }, SLOW_START);
+
+    // 히트 지점: 정상 복귀 + 이펙트 발동
+    setTimeout(() => {
         document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
+        SFX.setBGMRate(1);
+        isSpy ? SFX.hitSpy() : SFX.hitNormal();
+
+        const burst = cell.querySelector('.hit-burst');
+        burst.classList.remove('pop');
+        void burst.offsetWidth;
+        burst.classList.add('pop');
+
+        stars.classList.remove('active');
+        void stars.offsetWidth;
+        stars.classList.add('active');
+    }, HIT_WALL);
+
+    // 이펙트 완료 후 정리 (stars: 0.65s, burst: 0.3s)
+    setTimeout(() => {
         isSlowMo = false;
         cell.style.zIndex = '';
 
-        // 모든 두더지 숨기기
         document.querySelectorAll('.mole').forEach(m => {
             m.classList.remove('show', 'spy', 'normal');
             m.dataset.type = '';
         });
 
         if (isSpy) {
+            SFX.gameOver();
             endGame('스파이 두더지를 클릭했습니다!');
             return;
         }
@@ -217,7 +274,7 @@ function handleClick(index) {
 
         const nextDelay = 2000 + Math.random() * 3000;
         nextTurnTimer = setTimeout(showMoles, nextDelay);
-    }, SLOW_DURATION);
+    }, HIT_WALL + 900);
 }
 
 // 게임 시작
@@ -229,11 +286,13 @@ function startGame() {
 
     scoreDisplay.textContent = '0';
     timeLimitDisplay.textContent = '0.8';
+    updateBestDisplay();
 
     startScreen.classList.add('hidden');
     endScreen.classList.add('hidden');
 
     initGrid();
+    SFX.playBGM();
 
     // 첫 두더지 등장 (2~5초 후)
     const firstDelay = 2000 + Math.random() * 3000;
@@ -245,6 +304,7 @@ function endGame(reason) {
     gameActive = false;
     clearTimeout(turnTimer);
     clearTimeout(nextTurnTimer);
+    SFX.stopBGM();
 
     // 통계 계산
     const avgReaction = reactionTimes.length > 0
@@ -254,13 +314,27 @@ function endGame(reason) {
         ? Math.min(...reactionTimes)
         : 0;
 
+    // 최고기록 처리
+    const isNewRecord = score > 0 && saveBest(score);
+    const best = loadBest();
+
     document.getElementById('endReason').textContent = reason;
     document.getElementById('finalScore').textContent = score;
+    document.getElementById('allTimeBest').textContent = best ? best.score : '-';
     document.getElementById('avgReaction').textContent = avgReaction;
     document.getElementById('bestReaction').textContent = bestReaction;
 
+    const newRecordMsg = document.getElementById('newRecordMsg');
+    if (isNewRecord) {
+        newRecordMsg.classList.remove('hidden');
+    } else {
+        newRecordMsg.classList.add('hidden');
+    }
+
+    updateBestDisplay();
     endScreen.classList.remove('hidden');
 }
 
 // 초기화
+updateBestDisplay();
 initGrid();
