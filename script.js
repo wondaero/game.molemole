@@ -62,7 +62,11 @@ function initGrid() {
             stars.appendChild(orbit);
         }
 
-        cell.appendChild(mole);
+        const moleHole = document.createElement('div');
+        moleHole.className = 'mole-hole';
+        moleHole.appendChild(mole);
+
+        cell.appendChild(moleHole);
         cell.appendChild(hammer);
         cell.appendChild(burst);
         cell.appendChild(stars);
@@ -163,9 +167,15 @@ function handleClick(index) {
     burst.classList.add('pop');
 
     const stars = cell.querySelector('.spin-stars');
+    stars.querySelectorAll('.star-icon').forEach(icon => {
+        icon.textContent = isSpy ? '?' : '★';
+    });
     stars.classList.remove('active');
     void stars.offsetWidth;
     stars.classList.add('active');
+
+    // 클릭된 셀을 최상위로 (인접 셀에 가려지지 않게)
+    cell.style.zIndex = '100';
 
     // 슬로우 모션: 순간정지 → 슬로우 → 복귀
     isSlowMo = true;
@@ -188,6 +198,7 @@ function handleClick(index) {
         // 정상 속도 복귀
         document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
         isSlowMo = false;
+        cell.style.zIndex = '';
 
         // 모든 두더지 숨기기
         document.querySelectorAll('.mole').forEach(m => {
