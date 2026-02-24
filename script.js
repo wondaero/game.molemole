@@ -169,7 +169,7 @@ function handleClick(index) {
 
     // 슬로우 모션: 순간정지 → 슬로우 → 복귀
     isSlowMo = true;
-    const SLOW_RATE = 0.35;
+    const SLOW_RATE = 0.18;
     const FREEZE_MS = 80;
     const SLOW_DURATION = FREEZE_MS + Math.ceil(0.78 / SLOW_RATE * 1000) + 400;
 
