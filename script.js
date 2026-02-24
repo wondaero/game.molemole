@@ -5,6 +5,7 @@ let moleAppearTime = 0;
 let gameActive = false;
 let turnTimer = null;
 let nextTurnTimer = null;
+let isSlowMo = false;
 
 // DOM 요소
 const grid = document.getElementById('grid');
@@ -51,9 +52,20 @@ function initGrid() {
             burst.appendChild(ray);
         }
 
+        const stars = document.createElement('div');
+        stars.className = 'spin-stars';
+        for (let s = 0; s < 3; s++) {
+            const orbit = document.createElement('div');
+            orbit.className = 'star-orbit';
+            orbit.style.setProperty('--s', s);
+            orbit.innerHTML = '<span class="star-icon">★</span>';
+            stars.appendChild(orbit);
+        }
+
         cell.appendChild(mole);
         cell.appendChild(hammer);
         cell.appendChild(burst);
+        cell.appendChild(stars);
         cell.addEventListener('click', () => handleClick(i));
         grid.appendChild(cell);
     }
@@ -126,12 +138,17 @@ function showMoles() {
 
 // 클릭 처리
 function handleClick(index) {
-    if (!gameActive) return;
+    if (!gameActive || isSlowMo) return;
 
     const cell = document.querySelectorAll('.cell')[index];
     const mole = cell.querySelector('.mole');
 
     if (!mole.classList.contains('show')) return;
+
+    clearTimeout(turnTimer);
+
+    const reactionTime = Date.now() - moleAppearTime;
+    const isSpy = mole.dataset.type === 'spy';
 
     // 망치 애니메이션
     const hammer = cell.querySelector('.hammer');
@@ -139,26 +156,38 @@ function handleClick(index) {
     void hammer.offsetWidth;
     hammer.classList.add('hit');
 
-    // 히트 이펙트
+    // 히트 이펙트 + 별
     const burst = cell.querySelector('.hit-burst');
     burst.classList.remove('pop');
     void burst.offsetWidth;
     burst.classList.add('pop');
 
-    clearTimeout(turnTimer);
+    const stars = cell.querySelector('.spin-stars');
+    stars.classList.remove('active');
+    void stars.offsetWidth;
+    stars.classList.add('active');
 
-    const reactionTime = Date.now() - moleAppearTime;
+    // 슬로우 모션: 순간정지 → 슬로우 → 복귀
+    isSlowMo = true;
+    const SLOW_RATE = 0.35;
+    const FREEZE_MS = 80;
+    const SLOW_DURATION = FREEZE_MS + Math.ceil(0.78 / SLOW_RATE * 1000) + 400;
 
-    if (mole.dataset.type === 'spy') {
-        endGame('스파이 두더지를 클릭했습니다!');
-        return;
-    }
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            // 순간 정지
+            document.getAnimations().forEach(anim => { anim.playbackRate = 0; });
+            setTimeout(() => {
+                // 슬로우 모션 재개
+                document.getAnimations().forEach(anim => { anim.playbackRate = SLOW_RATE; });
+            }, FREEZE_MS);
+        });
+    });
 
-    if (mole.dataset.type === 'normal') {
-        // 성공
-        score++;
-        scoreDisplay.textContent = score;
-        reactionTimes.push(reactionTime);
+    setTimeout(() => {
+        // 정상 속도 복귀
+        document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
+        isSlowMo = false;
 
         // 모든 두더지 숨기기
         document.querySelectorAll('.mole').forEach(m => {
@@ -166,10 +195,18 @@ function handleClick(index) {
             m.dataset.type = '';
         });
 
-        // 다음 턴 (2~5초 후)
+        if (isSpy) {
+            endGame('스파이 두더지를 클릭했습니다!');
+            return;
+        }
+
+        score++;
+        scoreDisplay.textContent = score;
+        reactionTimes.push(reactionTime);
+
         const nextDelay = 2000 + Math.random() * 3000;
         nextTurnTimer = setTimeout(showMoles, nextDelay);
-    }
+    }, SLOW_DURATION);
 }
 
 // 게임 시작
@@ -177,6 +214,7 @@ function startGame() {
     score = 0;
     reactionTimes = [];
     gameActive = true;
+    isSlowMo = false;
 
     scoreDisplay.textContent = '0';
     timeLimitDisplay.textContent = '0.8';

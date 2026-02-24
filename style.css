@@ -200,13 +200,55 @@ h1 {
 }
 
 .hit-burst.pop .burst-ray {
-    animation: rayBurst 0.38s ease-out forwards;
+    animation: rayBurst 0.3s ease-out 0.13s forwards;
 }
 
 @keyframes rayBurst {
     0%   { transform: rotate(calc(var(--i) * 45deg)) scaleY(0);   opacity: 1; }
     40%  { transform: rotate(calc(var(--i) * 45deg)) scaleY(1);   opacity: 1; }
     100% { transform: rotate(calc(var(--i) * 45deg)) scaleY(1.5); opacity: 0; }
+}
+
+/* 별 도는 이펙트 */
+.spin-stars {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    z-index: 27;
+    pointer-events: none;
+}
+
+.star-orbit {
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    top: -22px;
+    left: -22px;
+    transform: rotate(calc(var(--s) * 120deg));
+    opacity: 0;
+}
+
+.spin-stars.active .star-orbit {
+    animation: starSpin 0.65s ease-out 0.13s forwards;
+}
+
+.star-icon {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 15px;
+    line-height: 1;
+    color: #FFD700;
+    filter: drop-shadow(0 0 3px #FF8C00);
+}
+
+@keyframes starSpin {
+    0%   { transform: rotate(calc(var(--s) * 120deg));           opacity: 1; }
+    75%  { transform: rotate(calc(var(--s) * 120deg + 270deg));  opacity: 1; }
+    100% { transform: rotate(calc(var(--s) * 120deg + 360deg));  opacity: 0; }
 }
 
 /* 스파이 두더지 - 선글라스만 차이 */
