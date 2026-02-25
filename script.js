@@ -58,6 +58,7 @@ let turnTimer = null;
 let nextTurnTimer = null;
 let isSlowMo = false;
 let slowMoTimers = [];
+let isShooting = false;
 
 // DOM 요소
 const grid = document.getElementById('grid');
@@ -77,23 +78,12 @@ function initGrid() {
         const mole = document.createElement('div');
         mole.className = 'mole';
         mole.innerHTML = `
-            <div class="mole-body">
-                <div class="mole-face">
-                    <div class="spy-glasses">
-                        <div class="glass left"></div>
-                        <div class="glass right"></div>
-                        <div class="glass-bridge"></div>
-                    </div>
-                    <div class="mole-eye left"></div>
-                    <div class="mole-eye right"></div>
-                    <div class="mole-nose"></div>
-                </div>
+            <div class="curtain curtain-left"></div>
+            <div class="curtain curtain-right"></div>
+            <div class="person-content">
+                <span class="person-text"></span>
             </div>
         `;
-
-        const hammer = document.createElement('div');
-        hammer.className = 'hammer';
-        hammer.innerHTML = '<div class="hammer-head"></div><div class="hammer-handle"></div>';
 
         const burst = document.createElement('div');
         burst.className = 'hit-burst';
@@ -119,7 +109,6 @@ function initGrid() {
         moleHole.appendChild(mole);
 
         cell.appendChild(moleHole);
-        cell.appendChild(hammer);
         cell.appendChild(burst);
         cell.appendChild(stars);
         cell.addEventListener('click', () => handleClick(i));
@@ -170,12 +159,15 @@ function showMoles() {
         const mole = cells[pos].querySelector('.mole');
         mole.classList.add('show');
 
+        const textEl = mole.querySelector('.person-text');
         if (idx === spyIndex) {
             mole.classList.add('spy');
             mole.dataset.type = 'spy';
+            if (textEl) textEl.textContent = '스파이';
         } else {
             mole.classList.add('normal');
             mole.dataset.type = 'normal';
+            if (textEl) textEl.textContent = '사람';
         }
     });
 
@@ -215,11 +207,8 @@ function handleClick(index) {
         icon.textContent = isSpy ? '?' : '★';
     });
 
-    // 망치 애니메이션 시작 (정상 속도)
-    const hammer = cell.querySelector('.hammer');
-    hammer.classList.remove('hit');
-    void hammer.offsetWidth;
-    hammer.classList.add('hit');
+    // 물총 발사
+    shootWater(cell);
 
     // 클릭된 셀을 최상위로 (인접 셀에 가려지지 않게)
     cell.style.zIndex = '100';
@@ -366,6 +355,93 @@ document.addEventListener('visibilitychange', () => {
         endGame('게임 화면을 벗어났습니다.');
     }
 });
+
+// ─── 물총 이펙트 ─────────────────────────────────────────────────────────────
+function shootWater(targetEl) {
+    const gun      = document.getElementById('gun');
+    const muzzlePt = document.getElementById('muzzlePoint');
+    if (!gun || !muzzlePt || isShooting) return;
+    isShooting = true;
+
+    const wr = targetEl.getBoundingClientRect();
+    const tx = wr.left + wr.width  / 2;
+    const ty = wr.top  + wr.height / 2;
+
+    const gr = gun.getBoundingClientRect();
+    const cx = gr.left + gr.width  / 2;
+    const cy = gr.top  + gr.height / 2;
+
+    const gunAng = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
+    gun.style.transform = `rotate(${gunAng}deg)`;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        const mr = muzzlePt.getBoundingClientRect();
+        const mx = mr.left + mr.width  / 2;
+        const my = mr.top  + mr.height / 2;
+
+        const dist      = Math.hypot(tx - mx, ty - my);
+        const streamAng = Math.atan2(tx - mx, -(ty - my)) * (180 / Math.PI);
+
+        const stream = document.createElement('div');
+        stream.className = 'water-stream';
+        const bott = window.innerHeight - my;
+        Object.assign(stream.style, {
+            left:       `${mx - 4}px`,
+            bottom:     `${bott}px`,
+            height:     '0px',
+            background: 'linear-gradient(to top, rgba(0,191,255,0.95), rgba(135,206,250,0.5))',
+            transform:  `rotate(${streamAng}deg)`,
+            transition: 'height 0.13s linear',
+            boxShadow:  '0 0 6px rgba(0,191,255,0.6)',
+        });
+        document.body.appendChild(stream);
+
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            stream.style.height = `${dist}px`;
+        }));
+
+        setTimeout(() => {
+            waterSplash(tx, ty);
+            stream.style.transition = 'opacity 0.12s';
+            stream.style.opacity    = '0';
+            setTimeout(() => stream.remove(), 150);
+            setTimeout(() => {
+                gun.style.transform = '';
+                isShooting = false;
+            }, 400);
+        }, 145);
+    }));
+}
+
+function waterSplash(cx, cy) {
+    for (let i = 0; i < 12; i++) {
+        const sz   = 4 + Math.random() * 9;
+        const drop = document.createElement('div');
+        Object.assign(drop.style, {
+            position:      'fixed',
+            width:         `${sz}px`,
+            height:        `${sz}px`,
+            background:    `rgba(${20 + Math.random()*40 | 0}, ${160 + Math.random()*70 | 0}, 255, 0.88)`,
+            borderRadius:  '50%',
+            left:          `${cx - sz / 2}px`,
+            top:           `${cy - sz / 2}px`,
+            pointerEvents: 'none',
+            zIndex:        '100',
+        });
+        document.body.appendChild(drop);
+
+        const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
+        const r = 16 + Math.random() * 40;
+        drop.animate([
+            { transform: 'translate(0,0) scale(1)', opacity: 1 },
+            { transform: `translate(${Math.cos(a)*r}px, ${Math.sin(a)*r}px) scale(0)`, opacity: 0 }
+        ], {
+            duration: 280 + Math.random() * 220,
+            easing:   'ease-out',
+            fill:     'forwards',
+        }).onfinish = () => drop.remove();
+    }
+}
 
 // 초기화
 updateBestDisplay();

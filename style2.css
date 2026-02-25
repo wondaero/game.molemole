@@ -18,7 +18,7 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 20px 20px 130px;
 }
 
 h1 {
@@ -43,9 +43,9 @@ h1 {
 }
 
 .game-container {
-    background: #8B4513;
+    background: #2c3e50;
     padding: var(--container-pad);
-    border-radius: 20px;
+    border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     width: min(calc(var(--cell) * 4 + var(--gap) * 3 + var(--container-pad) * 2), 100%);
 }
@@ -58,19 +58,19 @@ h1 {
 }
 
 .cell {
-    background: #654321;
-    border-radius: 50%;
+    background: #1a252f;
+    border-radius: 12px;
     position: relative;
     cursor: pointer;
-    box-shadow: inset 0 5px 15px rgba(0,0,0,0.5);
+    box-shadow: inset 0 3px 10px rgba(0,0,0,0.6);
     transition: transform 0.1s;
 }
 
-/* 두더지만 원형 클리핑 - 망치/이펙트는 클리핑 안함 */
+/* 커튼 클리핑 - 커튼이 칸 밖으로 안 나가게 */
 .mole-hole {
     position: absolute;
     inset: 0;
-    border-radius: 50%;
+    border-radius: 10px;
     overflow: hidden;
 }
 
@@ -78,107 +78,48 @@ h1 {
     transform: scale(1.05);
 }
 
+/* ── 커튼 구조 ── */
 .mole {
     position: absolute;
-    bottom: -100%;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(var(--cell) * 0.8);
-    height: calc(var(--cell) * 0.8);
-    transition: bottom 0.15s ease-out;
+    inset: 0;
 }
 
-.mole.show {
-    bottom: 5px;
-}
-
-.mole-body {
-    width: calc(var(--cell) * 0.7);
-    height: calc(var(--cell) * 0.6);
-    background: #8B4513;
-    border-radius: 50% 50% 40% 40%;
+/* 커튼 기본 - 닫힌 상태 */
+.curtain {
     position: absolute;
+    top: 0;
     bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 3px solid #5D3A1A;
+    width: 50%;
+    background: linear-gradient(to right, #8B0000 0%, #c0392b 50%, #8B0000 100%);
+    transition: transform 0.18s ease-out;
+    z-index: 2;
 }
+.curtain-left  { left: 0; }
+.curtain-right { right: 0; background: linear-gradient(to left, #8B0000 0%, #c0392b 50%, #8B0000 100%); }
 
-.mole-face {
+/* 커튼 열림 - .mole.show 상태 */
+.mole.show .curtain-left  { transform: translateX(-100%); }
+.mole.show .curtain-right { transform: translateX(100%); }
+
+/* 사람 내용 (커튼 뒤) */
+.person-content {
     position: absolute;
-    top: calc(var(--cell) * 0.1);
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(var(--cell) * 0.5);
-    height: calc(var(--cell) * 0.4);
-}
-
-.mole-eye {
-    width: 10px;
-    height: 10px;
-    background: #000;
-    border-radius: 50%;
-    position: absolute;
-    top: 5px;
-}
-
-.mole-eye.left { left: 8px; }
-.mole-eye.right { right: 8px; }
-
-.mole-nose {
-    width: 15px;
-    height: 12px;
-    background: #FF6B6B;
-    border-radius: 50%;
-    position: absolute;
-    top: 18px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-/* 망치 */
-.hammer {
-    position: absolute;
-    top: -4px;
-    right: 0;
-    width: 48px;
+    inset: 0;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    transform: translateX(40px) rotate(-45deg);
-    transform-origin: bottom center;
-    z-index: 20;
-    opacity: 0;
-    pointer-events: none;
+    justify-content: center;
+    z-index: 1;
 }
 
-.hammer.hit {
-    animation: hammerSwing 0.35s ease-out forwards;
+.person-text {
+    font-size: 1rem;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.3;
 }
 
-.hammer-head {
-    width: 48px;
-    height: 24px;
-    background: #e53e3e;
-    border-radius: 6px 6px 4px 4px;
-    border: 2px solid #9b1c1c;
-    box-shadow: inset 0 3px 5px rgba(255,255,255,0.25);
-    flex-shrink: 0;
-}
-
-.hammer-handle {
-    width: 12px;
-    height: 56px;
-    background: linear-gradient(to bottom, #a16207, #78350f);
-    border-radius: 0 0 6px 6px;
-    border: 1.5px solid #78350f;
-    flex-shrink: 0;
-}
-
-@keyframes hammerSwing {
-    0%   { transform: translateX(40px) rotate(10deg); opacity: 1; }
-    100% { transform: translateX(40px) rotate(-45deg);  opacity: 0; }
-}
+.mole.normal .person-text { color: #2ecc71; }
+.mole.spy    .person-text { color: #e74c3c; }
 
 /* 히트 이펙트 */
 .hit-burst {
@@ -256,46 +197,7 @@ h1 {
     100% { transform: rotate(calc(var(--s) * 120deg + 360deg));  opacity: 0; }
 }
 
-/* 스파이 두더지 - 선글라스만 차이 */
-.spy-glasses {
-    display: none;
-    position: absolute;
-    top: 3px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 45px;
-    height: 15px;
-}
-
-.mole.spy .spy-glasses {
-    display: block;
-}
-
-.glass {
-    width: 18px;
-    height: 12px;
-    background: #000;
-    border-radius: 3px;
-    position: absolute;
-    top: 0;
-}
-
-.glass.left { left: 0; }
-.glass.right { right: 0; }
-
-.glass-bridge {
-    width: 8px;
-    height: 3px;
-    background: #000;
-    position: absolute;
-    top: 5px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.mole.spy .mole-eye {
-    display: none;
-}
+/* 스파이 구분은 person-text 색상으로 처리 (위 .mole.spy .person-text 참조) */
 
 .start-screen, .end-screen {
     position: fixed;
@@ -461,3 +363,86 @@ h1 {
 
 .demo-label.good { color: #4CAF50; }
 .demo-label.bad { color: #f44336; }
+
+/* ── 물총 (측면 뷰) ── */
+.gun-wrap {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    pointer-events: none;
+}
+
+.gun {
+    position: relative;
+    width: 100px;
+    height: 58px;
+    transform-origin: center center;
+    transition: transform 0.08s ease-out;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+    pointer-events: none;
+}
+
+.gun-tank {
+    position: absolute;
+    top: 2px;
+    left: 8px;
+    width: 42px;
+    height: 14px;
+    background: rgba(100, 200, 255, 0.55);
+    border: 2px solid #0288D1;
+    border-radius: 7px;
+}
+
+.gun-barrel {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    width: 70px;
+    height: 18px;
+    background: linear-gradient(to bottom, #29B6F6 30%, #0277BD 70%);
+    border-radius: 4px 0 0 4px;
+    border: 1.5px solid #01579B;
+}
+
+.gun-muzzle {
+    position: absolute;
+    top: 19px;
+    right: 0;
+    width: 16px;
+    height: 12px;
+    background: #01579B;
+    border-radius: 0 5px 5px 0;
+    border-left: 2px solid #003c6b;
+}
+
+.gun-grip {
+    position: absolute;
+    top: 34px;
+    left: 22px;
+    width: 14px;
+    height: 22px;
+    background: #01579B;
+    border-radius: 0 0 6px 6px;
+    border: 1px solid #003c6b;
+}
+
+.muzzle-point {
+    position: absolute;
+    top: 25px;
+    right: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+/* ── 물줄기 ── */
+.water-stream {
+    position: fixed;
+    width: 8px;
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 45;
+    transform-origin: bottom center;
+}
