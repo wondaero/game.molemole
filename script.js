@@ -453,7 +453,10 @@ function shootWater(targetEl) {
     const my = mr.top  + mr.height / 2;
 
     const gunAng = Math.atan2(ty - my, tx - mx) * (180 / Math.PI);
-    gun.style.transform = `rotate(${gunAng}deg)`;
+    // 좌측 타겟: 총을 좌우 반전 후 대칭 각도 적용 / 우측 타겟: 그대로
+    gun.style.transform = tx < mx
+        ? `scaleX(-1) rotate(${180 - gunAng}deg)`
+        : `rotate(${gunAng}deg)`;
 
     const dist      = Math.hypot(tx - mx, ty - my);
     const streamAng = Math.atan2(tx - mx, -(ty - my)) * (180 / Math.PI);

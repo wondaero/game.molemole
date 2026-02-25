@@ -341,9 +341,9 @@ h1 {
 /* ── 물총 (측면 뷰) ── */
 .gun-wrap {
     position: fixed;
-    bottom: 24px;
+    bottom: 77px;          /* 총구가 화면 하단 110px 지점에 위치 */
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-100%); /* 총구(오른쪽 끝)를 가로 정가운데로 */
     z-index: 60;
     pointer-events: none;
 }
@@ -352,7 +352,8 @@ h1 {
     position: relative;
     width: 100px;
     height: 58px;
-    transform-origin: 100% 25px; /* 총구 위치 기준 회전 */
+    transform-origin: 100% 25px;  /* 총구 위치 기준 회전 */
+    transform: rotate(-45deg);    /* 기본 자세: 총구 우상향 대기 자세 */
     transition: transform 0.08s ease-out;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
     pointer-events: none;
