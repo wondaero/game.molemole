@@ -82,7 +82,9 @@
             <div class="info-item">점수: <span id="score">0</span></div>
             <div class="info-item">최고: <span id="bestScore">-</span></div>
             <div class="info-item">제한시간: <span id="timeLimit">0.8</span>초</div>
+            <div class="info-item">경과: <span id="elapsedDisplay">-</span>ms</div>
         </div>
+        <button id="pauseBtn" class="pause-btn hidden" onclick="togglePause()">⏸ 일시정지</button>
     </div>
     <div id="boardWrapper">
         <div class="game-container">
@@ -99,6 +101,12 @@
             <div class="gun-grip"></div>
             <div class="muzzle-point" id="muzzlePoint"></div>
         </div>
+    </div>
+
+    <!-- 일시정지 오버레이 -->
+    <div class="pause-overlay hidden" id="pauseOverlay">
+        <h2>⏸ 일시정지</h2>
+        <button class="btn" onclick="togglePause()">▶ 계속하기</button>
     </div>
 
     <script src="script.js"></script>

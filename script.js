@@ -59,6 +59,11 @@ let nextTurnTimer = null;
 let isSlowMo = false;
 let slowMoTimers = [];
 let isShooting = false;
+let isPaused = false;
+let elapsedRafId = null;
+let pauseData = null;
+let turnTimerEndTime = 0;
+let nextTurnTimerEndTime = 0;
 
 // DOM 요소
 const grid = document.getElementById('grid');
@@ -80,7 +85,7 @@ function scaleBoard() {
     if (!header || !wrapper || !container) return;
 
     const headerH = header.getBoundingClientRect().height;
-    const availW  = window.innerWidth;
+    const availW  = window.innerWidth  - 32; // 좌우 16px 여백
     const availH  = document.body.clientHeight - headerH - GUN_AREA_H;
 
     const scale = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
@@ -175,6 +180,7 @@ function showMoles() {
     });
 
     moleAppearTime = Date.now();
+    startElapsedDisplay();
 
     SFX.moleAppear();
 
@@ -182,6 +188,7 @@ function showMoles() {
     const timeLimit = getTimeLimit();
     timeLimitDisplay.textContent = timeLimit;
 
+    turnTimerEndTime = Date.now() + timeLimit * 1000;
     turnTimer = setTimeout(() => {
         if (gameActive) {
             SFX.gameOver();
@@ -192,7 +199,7 @@ function showMoles() {
 
 // 클릭 처리
 function handleClick(index) {
-    if (!gameActive || isSlowMo) return;
+    if (!gameActive || isSlowMo || isPaused) return;
 
     const cell = document.querySelectorAll('.cell')[index];
     const mole = cell.querySelector('.mole');
@@ -200,6 +207,7 @@ function handleClick(index) {
     if (!mole.classList.contains('show')) return;
 
     clearTimeout(turnTimer);
+    stopElapsedDisplay();
 
     const reactionTime = Date.now() - moleAppearTime;
     const isSpy = mole.dataset.type === 'spy';
@@ -252,6 +260,7 @@ function handleClick(index) {
             reactionTimes.push(reactionTime);
 
             const nextDelay = 2000 + Math.random() * 3000;
+            nextTurnTimerEndTime = Date.now() + nextDelay;
             nextTurnTimer = setTimeout(showMoles, nextDelay);
         }, HIT_WALL + 900),
     ];
@@ -264,12 +273,16 @@ function startGame() {
     clearTimeout(nextTurnTimer);
     slowMoTimers.forEach(clearTimeout);
     slowMoTimers = [];
-    document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
+    document.getAnimations().forEach(anim => { anim.playbackRate = 1; anim.play(); });
 
     score = 0;
     reactionTimes = [];
     gameActive = true;
     isSlowMo = false;
+    isPaused = false;
+    pauseData = null;
+    turnTimerEndTime = 0;
+    nextTurnTimerEndTime = 0;
 
     scoreDisplay.textContent = '0';
     timeLimitDisplay.textContent = getTimeLimit();
@@ -281,8 +294,12 @@ function startGame() {
     initGrid();
     SFX.playBGM();
 
+    const pauseBtn = document.getElementById('pauseBtn');
+    if (pauseBtn) { pauseBtn.classList.remove('hidden'); pauseBtn.textContent = '⏸ 일시정지'; }
+
     // 첫 두더지 등장 (2~5초 후)
     const firstDelay = 2000 + Math.random() * 3000;
+    nextTurnTimerEndTime = Date.now() + firstDelay;
     nextTurnTimer = setTimeout(showMoles, firstDelay);
 }
 
@@ -296,12 +313,17 @@ function endGame(reason, elapsedMs = null) {
 
     gameActive = false;
     isSlowMo = false;
+    isPaused = false;
+    pauseData = null;
     clearTimeout(turnTimer);
     clearTimeout(nextTurnTimer);
     slowMoTimers.forEach(clearTimeout);
     slowMoTimers = [];
-    document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
+    document.getAnimations().forEach(anim => { anim.playbackRate = 1; anim.play(); });
     SFX.stopBGM();
+    stopElapsedDisplay();
+    document.getElementById('pauseOverlay').classList.add('hidden');
+    document.getElementById('pauseBtn').classList.add('hidden');
 
     // 통계 계산
     const avgReaction = reactionTimes.length > 0
@@ -344,6 +366,76 @@ document.addEventListener('visibilitychange', () => {
     }
 });
 
+// 일시정지
+function togglePause() {
+    if (!gameActive || isSlowMo) return;
+    if (document.querySelector('.mole.show')) return; // 커튼 열린 동안 일시정지 불가
+
+    const overlay = document.getElementById('pauseOverlay');
+    const btn     = document.getElementById('pauseBtn');
+
+    if (!isPaused) {
+        isPaused = true;
+        const now = Date.now();
+        pauseData = {
+            turnRemaining: turnTimer     ? turnTimerEndTime     - now : -1,
+            nextRemaining: nextTurnTimer ? nextTurnTimerEndTime - now : -1,
+        };
+        clearTimeout(turnTimer);
+        clearTimeout(nextTurnTimer);
+        turnTimer     = null;
+        nextTurnTimer = null;
+        document.getAnimations().forEach(anim => anim.pause());
+        overlay.classList.remove('hidden');
+        if (btn) btn.textContent = '▶ 계속';
+    } else {
+        isPaused = false;
+        document.getAnimations().forEach(anim => anim.play());
+        if (pauseData) {
+            if (pauseData.turnRemaining >= 0) {
+                const rem = Math.max(0, pauseData.turnRemaining);
+                turnTimerEndTime = Date.now() + rem;
+                turnTimer = setTimeout(() => {
+                    if (gameActive) { SFX.gameOver(); endGame('시간 초과! 두더지를 클릭하지 못했습니다.'); }
+                }, rem);
+            }
+            if (pauseData.nextRemaining >= 0) {
+                const rem = Math.max(0, pauseData.nextRemaining);
+                nextTurnTimerEndTime = Date.now() + rem;
+                nextTurnTimer = setTimeout(showMoles, rem);
+            }
+            pauseData = null;
+        }
+        overlay.classList.add('hidden');
+        if (btn) btn.textContent = '⏸ 일시정지';
+    }
+}
+
+// ─── 실시간 경과시간 표시 ─────────────────────────────────────────────────────
+function startElapsedDisplay() {
+    stopElapsedDisplay();
+    const el = document.getElementById('elapsedDisplay');
+    if (!el) return;
+    function tick() {
+        el.textContent = moleAppearTime > 0 ? Date.now() - moleAppearTime : 0;
+        elapsedRafId = requestAnimationFrame(tick);
+    }
+    elapsedRafId = requestAnimationFrame(tick);
+}
+
+function stopElapsedDisplay() {
+    if (elapsedRafId) { cancelAnimationFrame(elapsedRafId); elapsedRafId = null; }
+    const el = document.getElementById('elapsedDisplay');
+    if (el) el.textContent = '-';
+}
+
+// 키보드 단축키 (Esc / P)
+document.addEventListener('keydown', (e) => {
+    if (gameActive && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) {
+        togglePause();
+    }
+});
+
 // ─── 물총 이펙트 ─────────────────────────────────────────────────────────────
 function shootWater(targetEl) {
     const gun      = document.getElementById('gun');
@@ -355,50 +447,45 @@ function shootWater(targetEl) {
     const tx = wr.left + wr.width  / 2;
     const ty = wr.top  + wr.height / 2;
 
-    const gr = gun.getBoundingClientRect();
-    const cx = gr.left + gr.width  / 2;
-    const cy = gr.top  + gr.height / 2;
+    // transform-origin이 총구이므로 회전 전에 읽으면 항상 정확한 위치
+    const mr = muzzlePt.getBoundingClientRect();
+    const mx = mr.left + mr.width  / 2;
+    const my = mr.top  + mr.height / 2;
 
-    const gunAng = Math.atan2(ty - cy, tx - cx) * (180 / Math.PI);
+    const gunAng = Math.atan2(ty - my, tx - mx) * (180 / Math.PI);
     gun.style.transform = `rotate(${gunAng}deg)`;
 
+    const dist      = Math.hypot(tx - mx, ty - my);
+    const streamAng = Math.atan2(tx - mx, -(ty - my)) * (180 / Math.PI);
+
+    const stream = document.createElement('div');
+    stream.className = 'water-stream';
+    const bott = window.innerHeight - my;
+    Object.assign(stream.style, {
+        left:       `${mx - 4}px`,
+        bottom:     `${bott}px`,
+        height:     '0px',
+        background: 'linear-gradient(to top, rgba(0,191,255,0.95), rgba(135,206,250,0.5))',
+        transform:  `rotate(${streamAng}deg)`,
+        transition: 'height 0.13s linear',
+        boxShadow:  '0 0 6px rgba(0,191,255,0.6)',
+    });
+    document.body.appendChild(stream);
+
     requestAnimationFrame(() => requestAnimationFrame(() => {
-        const mr = muzzlePt.getBoundingClientRect();
-        const mx = mr.left + mr.width  / 2;
-        const my = mr.top  + mr.height / 2;
-
-        const dist      = Math.hypot(tx - mx, ty - my);
-        const streamAng = Math.atan2(tx - mx, -(ty - my)) * (180 / Math.PI);
-
-        const stream = document.createElement('div');
-        stream.className = 'water-stream';
-        const bott = window.innerHeight - my;
-        Object.assign(stream.style, {
-            left:       `${mx - 4}px`,
-            bottom:     `${bott}px`,
-            height:     '0px',
-            background: 'linear-gradient(to top, rgba(0,191,255,0.95), rgba(135,206,250,0.5))',
-            transform:  `rotate(${streamAng}deg)`,
-            transition: 'height 0.13s linear',
-            boxShadow:  '0 0 6px rgba(0,191,255,0.6)',
-        });
-        document.body.appendChild(stream);
-
-        requestAnimationFrame(() => requestAnimationFrame(() => {
-            stream.style.height = `${dist}px`;
-        }));
-
-        setTimeout(() => {
-            waterSplash(tx, ty);
-            stream.style.transition = 'opacity 0.12s';
-            stream.style.opacity    = '0';
-            setTimeout(() => stream.remove(), 150);
-            setTimeout(() => {
-                gun.style.transform = '';
-                isShooting = false;
-            }, 400);
-        }, 145);
+        stream.style.height = `${dist}px`;
     }));
+
+    setTimeout(() => {
+        waterSplash(tx, ty);
+        stream.style.transition = 'opacity 0.12s';
+        stream.style.opacity    = '0';
+        setTimeout(() => stream.remove(), 150);
+        setTimeout(() => {
+            gun.style.transform = '';
+            isShooting = false;
+        }, 400);
+    }, 145);
 }
 
 function waterSplash(cx, cy) {
