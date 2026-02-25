@@ -70,8 +70,8 @@ const endScreen = document.getElementById('endScreen');
 // ─── 보드 스케일 ────────────────────────────────────────────────────────────────
 // 보드 고정 크기: --cell:120 × 4 + gap:10 × 3 + pad:20 × 2 = 550px
 const BOARD_SIZE = 550;
-// 물총 영역 높이: bottom 오프셋(24) + 총 높이(58) + 여유(10)
-const GUN_AREA_H = 92;
+// 물총 영역 높이: bottom 오프셋(24) + 총 높이(58) + 여유(20)
+const GUN_AREA_H = 110;
 
 function scaleBoard() {
     const header    = document.getElementById('gameHeader');
@@ -81,7 +81,7 @@ function scaleBoard() {
 
     const headerH = header.getBoundingClientRect().height;
     const availW  = window.innerWidth;
-    const availH  = window.innerHeight - headerH - GUN_AREA_H;
+    const availH  = document.body.clientHeight - headerH - GUN_AREA_H;
 
     const scale = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
 
