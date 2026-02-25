@@ -48,6 +48,7 @@ h1 {
     width: 100%;
     display: flex;
     justify-content: center;
+    align-items: flex-start; /* flex stretch가 game-container 높이 누르지 않도록 */
 }
 
 .info-item {
@@ -61,7 +62,8 @@ h1 {
     padding: var(--container-pad);
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    width: calc(var(--cell) * 4 + var(--gap) * 3 + var(--container-pad) * 2);
+    width:  calc(var(--cell) * 4 + var(--gap) * 3 + var(--container-pad) * 2);
+    height: calc(var(--cell) * 4 + var(--gap) * 3 + var(--container-pad) * 2);
     flex-shrink: 0;
     transform-origin: top center;
 }
