@@ -1,173 +1,161 @@
-// ─── 사운드 시스템 (구멍 - 파일 연결 시 구현) ────────────────────────────────
+// ─── 사운드 시스템 (TODO: 파일 연결 시 구현) ────────────────────────────────
 const SFX = {
-    // TODO: 배경음악 (HTMLAudioElement 또는 Web Audio API AudioBuffer)
     // bgm: new Audio('sounds/bgm.mp3'),
-
-    // 배경음 재생 (게임 시작 시 호출)
-    playBGM() { /* TODO */ },
-
-    // 배경음 정지 (게임 종료 시 호출)
-    stopBGM() { /* TODO */ },
-
-    // 슬로우모션 시 배경음 속도 조절 (rate: 0~1 = 슬로우, 1 = 정상)
+    playBGM()         { /* TODO */ },
+    stopBGM()         { /* TODO */ },
     setBGMRate(_rate) { /* TODO: bgm.playbackRate = _rate */ },
-
-    // 두더지 등장음
-    moleAppear() { /* TODO */ },
-
-    // 일반 두더지 타격음
-    hitNormal() { /* TODO */ },
-
-    // 스파이 두더지 타격음
-    hitSpy() { /* TODO */ },
-
-    // 시간 초과 / 게임 오버 음
-    gameOver() { /* TODO */ },
+    moleAppear()      { /* TODO */ },
+    hitNormal()       { /* TODO */ },
+    hitSpy()          { /* TODO */ },
+    gameOver()        { /* TODO */ },
 };
 
 // ─── 최고 기록 (localStorage) ─────────────────────────────────────────────────
 const STORAGE_KEY = 'molemole_best';
 
 function loadBest() {
-    try {
-        return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null;
-    } catch { return null; }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; }
+    catch { return null; }
 }
 
 function saveBest(score) {
     const prev = loadBest();
     if (!prev || score > prev.score) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({ score }));
-        return true; // 신기록
+        return true;
     }
     return false;
 }
 
 function updateBestDisplay() {
     const best = loadBest();
-    const el = document.getElementById('bestScore');
-    if (el) el.textContent = best ? best.score : '-';
+    elBestScore.textContent = best ? best.score : '-';
 }
 
+// ─── 상수 ────────────────────────────────────────────────────────────────────
+const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
+const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
+const TURN_DELAY_MIN   = 2000;
+const TURN_DELAY_RNG   = 3000;
+const SLOW_RATE        = 0.1;
+const SLOW_START_MS    = 117;   // 정상속도 기준 히트 1/3 지점
+const REMAINING_HIT_MS = 23;    // 1/3 → 40% 히트 잔여 (정상속도 ms)
+const HIT_WALL_MS      = SLOW_START_MS + Math.ceil(REMAINING_HIT_MS / SLOW_RATE); // ~347ms
+
 // ─── 게임 상태 ────────────────────────────────────────────────────────────────
-let score = 0;
-let reactionTimes = [];
-let moleAppearTime = 0;
-let gameActive = false;
-let turnTimer = null;
-let nextTurnTimer = null;
-let isSlowMo = false;
-let slowMoTimers = [];
-let isShooting = false;
-let isPaused = false;
-let elapsedRafId = null;
-let pauseData = null;
-let turnTimerEndTime = 0;
+let score             = 0;
+let reactionTimes     = [];
+let moleAppearTime    = 0;
+let gameActive        = false;
+let turnTimer         = null;
+let nextTurnTimer     = null;
+let isSlowMo          = false;
+let slowMoTimers      = [];
+let isShooting        = false;
+let isPaused          = false;
+let elapsedRafId      = null;
+let pauseData         = null;
+let turnTimerEndTime  = 0;
 let nextTurnTimerEndTime = 0;
 
-// DOM 요소
-const grid = document.getElementById('grid');
-const scoreDisplay = document.getElementById('score');
-const timeLimitDisplay = document.getElementById('timeLimit');
-const startScreen = document.getElementById('startScreen');
-const endScreen = document.getElementById('endScreen');
+// 캐시된 그리드 (initGrid 후 갱신)
+let cachedCells = [];
+let cachedMoles = [];
 
-// ─── 보드 스케일 ────────────────────────────────────────────────────────────────
-// 보드 고정 크기: --cell:120 × 4 + gap:10 × 3 + pad:20 × 2 = 550px
-const BOARD_SIZE = 550;
-// 물총 영역 높이: bottom 오프셋(24) + 총 높이(58) + 여유(20)
-const GUN_AREA_H = 110;
+// ─── DOM 캐시 ─────────────────────────────────────────────────────────────────
+const grid          = document.getElementById('grid');
+const elScore       = document.getElementById('score');
+const elTimeLimit   = document.getElementById('timeLimit');
+const elBestScore   = document.getElementById('bestScore');
+const elElapsed     = document.getElementById('elapsedDisplay');
+const startScreen   = document.getElementById('startScreen');
+const endScreen     = document.getElementById('endScreen');
+const pauseOverlay  = document.getElementById('pauseOverlay');
+const pauseBtn      = document.getElementById('pauseBtn');
+const gun           = document.getElementById('gun');
+const muzzlePt      = document.getElementById('muzzlePoint');
+const boardWrapper  = document.getElementById('boardWrapper');
+const gameHeader    = document.getElementById('gameHeader');
+const gameContainer = document.querySelector('.game-container');
 
+// ─── 유틸 ────────────────────────────────────────────────────────────────────
+const getNextDelay = () => TURN_DELAY_MIN + Math.random() * TURN_DELAY_RNG;
+
+// ─── 보드 스케일 ──────────────────────────────────────────────────────────────
 function scaleBoard() {
-    const header    = document.getElementById('gameHeader');
-    const wrapper   = document.getElementById('boardWrapper');
-    const container = document.querySelector('.game-container');
-    if (!header || !wrapper || !container) return;
-
-    const headerH = header.getBoundingClientRect().height;
-    const availW  = window.innerWidth  - 32; // 좌우 16px 여백
+    if (!gameHeader || !boardWrapper || !gameContainer) return;
+    const headerH = gameHeader.getBoundingClientRect().height;
+    const availW  = window.innerWidth - 32;
     const availH  = document.body.clientHeight - headerH - GUN_AREA_H;
-
-    const scale = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
-
-    container.style.transform = `scale(${scale})`;
-    wrapper.style.height      = `${BOARD_SIZE * scale}px`;
+    const scale   = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
+    gameContainer.style.transform = `scale(${scale})`;
+    boardWrapper.style.height     = `${BOARD_SIZE * scale}px`;
 }
 
 window.addEventListener('resize', scaleBoard);
 
-// 그리드 초기화
+// ─── 그리드 초기화 ────────────────────────────────────────────────────────────
 function initGrid() {
     grid.innerHTML = '';
+    cachedCells = [];
+    cachedMoles = [];
+
     for (let i = 0; i < 16; i++) {
         const cell = document.createElement('div');
         cell.className = 'cell';
-        cell.dataset.index = i;
 
         const mole = document.createElement('div');
         mole.className = 'mole';
-        mole.innerHTML = `
-            <div class="curtain curtain-left"></div>
-            <div class="curtain curtain-right"></div>
-            <div class="person-content">
-                <span class="person-text"></span>
-            </div>
-        `;
+        mole.innerHTML = '<div class="person-content"><span class="person-text"></span></div>';
 
-        const moleHole = document.createElement('div');
-        moleHole.className = 'mole-hole';
-        moleHole.appendChild(mole);
+        const hole = document.createElement('div');
+        hole.className = 'mole-hole';
+        hole.appendChild(mole);
 
-        cell.appendChild(moleHole);
+        cell.appendChild(hole);
         cell.addEventListener('click', () => handleClick(i));
         grid.appendChild(cell);
+
+        cachedCells.push(cell);
+        cachedMoles.push(mole);
     }
 }
 
-// 난이도에 따른 제한 시간
+// ─── 난이도 ───────────────────────────────────────────────────────────────────
 function getTimeLimit() {
     if (score >= 31) return Math.max(0.1, parseFloat((0.4 - (score - 30) * 0.001).toFixed(3)));
     if (score >= 21) return 0.4;
     if (score >= 16) return 0.5;
     if (score >= 11) return 0.8;
-    if (score >= 6) return 1.0;
+    if (score >= 6)  return 1.0;
     return 1.5;
 }
 
-// 랜덤 위치 3개 선택
+// ─── 랜덤 위치 3개 선택 ───────────────────────────────────────────────────────
 function getRandomPositions() {
-    const positions = [];
-    while (positions.length < 3) {
-        const pos = Math.floor(Math.random() * 16);
-        if (!positions.includes(pos)) {
-            positions.push(pos);
-        }
-    }
-    return positions;
+    const positions = new Set();
+    while (positions.size < 3) positions.add(Math.floor(Math.random() * 16));
+    return [...positions];
 }
 
-// 두더지 등장
+// ─── 두더지 등장 ──────────────────────────────────────────────────────────────
 function showMoles() {
     if (!gameActive) return;
 
     const positions = getRandomPositions();
-    const spyIndex = Math.floor(Math.random() * 3); // 스파이 위치
+    const spyIndex  = Math.floor(Math.random() * 3);
 
-    const cells = document.querySelectorAll('.cell');
-    const moles = document.querySelectorAll('.mole');
-
-    // 모든 두더지 숨기기
-    moles.forEach(mole => {
-        mole.classList.remove('show', 'spy', 'normal');
-        mole.dataset.type = '';
+    // 전체 리셋
+    cachedMoles.forEach(m => {
+        m.classList.remove('show', 'spy', 'normal');
+        m.dataset.type = '';
     });
 
-    // 선택된 위치에 두더지 표시
+    // 등장
     positions.forEach((pos, idx) => {
-        const mole = cells[pos].querySelector('.mole');
-        mole.classList.add('show');
-
+        const mole   = cachedMoles[pos];
         const textEl = mole.querySelector('.person-text');
+        mole.classList.add('show');
         if (idx === spyIndex) {
             mole.classList.add('spy');
             mole.dataset.type = 'spy';
@@ -181,70 +169,50 @@ function showMoles() {
 
     moleAppearTime = Date.now();
     startElapsedDisplay();
-
     SFX.moleAppear();
 
-    // 제한 시간 타이머
     const timeLimit = getTimeLimit();
-    timeLimitDisplay.textContent = timeLimit;
-
+    elTimeLimit.textContent = timeLimit;
     turnTimerEndTime = Date.now() + timeLimit * 1000;
     turnTimer = setTimeout(() => {
-        if (gameActive) {
-            SFX.gameOver();
-            endGame('시간 초과! 두더지를 클릭하지 못했습니다.');
-        }
+        if (gameActive) { SFX.gameOver(); endGame('시간 초과! 두더지를 클릭하지 못했습니다.'); }
     }, timeLimit * 1000);
 }
 
-// 클릭 처리
+// ─── 클릭 처리 ────────────────────────────────────────────────────────────────
 function handleClick(index) {
     if (!gameActive || isSlowMo || isPaused) return;
 
-    const cell = document.querySelectorAll('.cell')[index];
-    const mole = cell.querySelector('.mole');
-
+    const mole = cachedMoles[index];
     if (!mole.classList.contains('show')) return;
 
     clearTimeout(turnTimer);
     stopElapsedDisplay();
 
     const reactionTime = Date.now() - moleAppearTime;
-    const isSpy = mole.dataset.type === 'spy';
+    const isSpy        = mole.dataset.type === 'spy';
+    const cell         = cachedCells[index];
 
-    // 물총 발사
     shootWater(cell);
-
-    // 클릭된 셀을 최상위로 (인접 셀에 가려지지 않게)
     cell.style.zIndex = '100';
     isSlowMo = true;
 
-    // 타이밍: 망치 총 0.35s, 히트 = 40%(140ms), 슬로우 시작 = 1/3(117ms)
-    const SLOW_RATE = 0.1;
-    const SLOW_START = 117;                                // 정상속도로 1/3 지점 (ms)
-    const REMAINING_TO_HIT = 23;                          // 1/3→40% 잔여 (ms, 정상속도)
-    const HIT_WALL = SLOW_START + Math.ceil(REMAINING_TO_HIT / SLOW_RATE); // ~347ms
-
     slowMoTimers = [
-        // 1/3 지점: 갑자기 슬로우
         setTimeout(() => {
-            document.getAnimations().forEach(anim => { anim.playbackRate = SLOW_RATE; });
+            document.getAnimations().forEach(a => { a.playbackRate = SLOW_RATE; });
             SFX.setBGMRate(SLOW_RATE);
-        }, SLOW_START),
+        }, SLOW_START_MS),
 
-        // 히트 지점: 정상 복귀
         setTimeout(() => {
-            document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
+            document.getAnimations().forEach(a => { a.playbackRate = 1; });
             SFX.setBGMRate(1);
             isSpy ? SFX.hitSpy() : SFX.hitNormal();
-        }, HIT_WALL),
+        }, HIT_WALL_MS),
 
-        // 이펙트 완료 후 정리 (stars: 0.65s, burst: 0.3s)
         setTimeout(() => {
             isSlowMo = false;
             cell.style.zIndex = '';
-
-            document.querySelectorAll('.mole').forEach(m => {
+            cachedMoles.forEach(m => {
                 m.classList.remove('show', 'spy', 'normal');
                 m.dataset.type = '';
             });
@@ -256,36 +224,36 @@ function handleClick(index) {
             }
 
             score++;
-            scoreDisplay.textContent = score;
+            elScore.textContent = score;
             reactionTimes.push(reactionTime);
 
-            const nextDelay = 2000 + Math.random() * 3000;
-            nextTurnTimerEndTime = Date.now() + nextDelay;
-            nextTurnTimer = setTimeout(showMoles, nextDelay);
-        }, HIT_WALL + 900),
+            const delay = getNextDelay();
+            nextTurnTimerEndTime = Date.now() + delay;
+            nextTurnTimer = setTimeout(showMoles, delay);
+        }, HIT_WALL_MS + 900),
     ];
 }
 
-// 게임 시작
+// ─── 게임 시작 ────────────────────────────────────────────────────────────────
 function startGame() {
-    // 혹시 남아있는 타이머 전부 정리
     clearTimeout(turnTimer);
     clearTimeout(nextTurnTimer);
     slowMoTimers.forEach(clearTimeout);
     slowMoTimers = [];
-    document.getAnimations().forEach(anim => { anim.playbackRate = 1; anim.play(); });
+    document.getAnimations().forEach(a => { a.playbackRate = 1; a.play(); });
 
-    score = 0;
-    reactionTimes = [];
-    gameActive = true;
-    isSlowMo = false;
-    isPaused = false;
-    pauseData = null;
-    turnTimerEndTime = 0;
+    score                = 0;
+    reactionTimes        = [];
+    gameActive           = true;
+    isSlowMo             = false;
+    isPaused             = false;
+    moleAppearTime       = 0;
+    pauseData            = null;
+    turnTimerEndTime     = 0;
     nextTurnTimerEndTime = 0;
 
-    scoreDisplay.textContent = '0';
-    timeLimitDisplay.textContent = getTimeLimit();
+    elScore.textContent     = '0';
+    elTimeLimit.textContent = getTimeLimit();
     updateBestDisplay();
 
     startScreen.classList.add('hidden');
@@ -294,85 +262,65 @@ function startGame() {
     initGrid();
     SFX.playBGM();
 
-    const pauseBtn = document.getElementById('pauseBtn');
-    if (pauseBtn) { pauseBtn.classList.remove('hidden'); pauseBtn.textContent = '⏸ 일시정지'; }
+    pauseBtn.classList.remove('hidden');
+    pauseBtn.textContent = '⏸ 일시정지';
 
-    // 첫 두더지 등장 (2~5초 후)
-    const firstDelay = 2000 + Math.random() * 3000;
-    nextTurnTimerEndTime = Date.now() + firstDelay;
-    nextTurnTimer = setTimeout(showMoles, firstDelay);
+    const delay = getNextDelay();
+    nextTurnTimerEndTime = Date.now() + delay;
+    nextTurnTimer = setTimeout(showMoles, delay);
 }
 
-// 게임 종료
-// elapsedMs: 스파이 클릭 시 실제 반응 시간 전달, 시간초과 시 null(자동계산)
+// ─── 게임 종료 ────────────────────────────────────────────────────────────────
+// elapsedMs: 스파이 클릭 시 반응 시간, 시간초과 시 null
 function endGame(reason, elapsedMs = null) {
     const currentTimeLimit = getTimeLimit();
-    const actualElapsed = elapsedMs !== null
+    const actualElapsed    = elapsedMs !== null
         ? elapsedMs
         : (moleAppearTime > 0 ? Math.round(Date.now() - moleAppearTime) : 0);
 
     gameActive = false;
-    isSlowMo = false;
-    isPaused = false;
-    pauseData = null;
+    isSlowMo   = false;
+    isPaused   = false;
+    pauseData  = null;
     clearTimeout(turnTimer);
     clearTimeout(nextTurnTimer);
     slowMoTimers.forEach(clearTimeout);
     slowMoTimers = [];
-    document.getAnimations().forEach(anim => { anim.playbackRate = 1; anim.play(); });
+    document.getAnimations().forEach(a => { a.playbackRate = 1; a.play(); });
     SFX.stopBGM();
     stopElapsedDisplay();
-    document.getElementById('pauseOverlay').classList.add('hidden');
-    document.getElementById('pauseBtn').classList.add('hidden');
+    pauseOverlay.classList.add('hidden');
+    pauseBtn.classList.add('hidden');
 
-    // 통계 계산
-    const avgReaction = reactionTimes.length > 0
-        ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length)
-        : 0;
-    const bestReaction = reactionTimes.length > 0
-        ? Math.min(...reactionTimes)
-        : 0;
+    const avgReaction  = reactionTimes.length > 0
+        ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length) : 0;
+    const bestReaction = reactionTimes.length > 0 ? Math.min(...reactionTimes) : 0;
 
-    // 최고기록 처리
     const isNewRecord = score > 0 && saveBest(score);
-    const best = loadBest();
+    const best        = loadBest();
 
-    document.getElementById('endReason').textContent = reason;
-    document.getElementById('finalScore').textContent = score;
-    document.getElementById('allTimeBest').textContent = best ? best.score : '-';
-    document.getElementById('avgReaction').textContent = avgReaction;
+    document.getElementById('endReason').textContent    = reason;
+    document.getElementById('finalScore').textContent   = score;
+    document.getElementById('allTimeBest').textContent  = best ? best.score : '-';
+    document.getElementById('avgReaction').textContent  = avgReaction;
     document.getElementById('bestReaction').textContent = bestReaction;
-
-    const stageLimitEl = document.getElementById('stageTimeLimit');
-    const elapsedEl    = document.getElementById('elapsedTime');
-    if (stageLimitEl) stageLimitEl.textContent = currentTimeLimit;
-    if (elapsedEl)    elapsedEl.textContent    = actualElapsed;
-
-    const newRecordMsg = document.getElementById('newRecordMsg');
-    if (isNewRecord) {
-        newRecordMsg.classList.remove('hidden');
-    } else {
-        newRecordMsg.classList.add('hidden');
-    }
+    document.getElementById('stageTimeLimit').textContent = currentTimeLimit;
+    document.getElementById('elapsedTime').textContent    = actualElapsed;
+    document.getElementById('newRecordMsg').classList.toggle('hidden', !isNewRecord);
 
     updateBestDisplay();
     endScreen.classList.remove('hidden');
 }
 
-// 탭 이탈 시 게임 종료
+// ─── 탭 이탈 ─────────────────────────────────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && gameActive) {
-        endGame('게임 화면을 벗어났습니다.');
-    }
+    if (document.hidden && gameActive) endGame('게임 화면을 벗어났습니다.');
 });
 
-// 일시정지
+// ─── 일시정지 ─────────────────────────────────────────────────────────────────
 function togglePause() {
     if (!gameActive || isSlowMo) return;
-    if (document.querySelector('.mole.show')) return; // 커튼 열린 동안 일시정지 불가
-
-    const overlay = document.getElementById('pauseOverlay');
-    const btn     = document.getElementById('pauseBtn');
+    if (cachedMoles.some(m => m.classList.contains('show'))) return; // 두더지 등장 중 불가
 
     if (!isPaused) {
         isPaused = true;
@@ -380,17 +328,18 @@ function togglePause() {
         pauseData = {
             turnRemaining: turnTimer     ? turnTimerEndTime     - now : -1,
             nextRemaining: nextTurnTimer ? nextTurnTimerEndTime - now : -1,
+            moleElapsed:   moleAppearTime > 0 ? now - moleAppearTime : -1,
         };
         clearTimeout(turnTimer);
         clearTimeout(nextTurnTimer);
-        turnTimer     = null;
-        nextTurnTimer = null;
-        document.getAnimations().forEach(anim => anim.pause());
-        overlay.classList.remove('hidden');
-        if (btn) btn.textContent = '▶ 계속';
+        turnTimer = nextTurnTimer = null;
+        document.getAnimations().forEach(a => a.pause());
+        stopElapsedDisplay();
+        pauseOverlay.classList.remove('hidden');
+        pauseBtn.textContent = '▶ 계속하기';
     } else {
         isPaused = false;
-        document.getAnimations().forEach(anim => anim.play());
+        document.getAnimations().forEach(a => a.play());
         if (pauseData) {
             if (pauseData.turnRemaining >= 0) {
                 const rem = Math.max(0, pauseData.turnRemaining);
@@ -404,42 +353,41 @@ function togglePause() {
                 nextTurnTimerEndTime = Date.now() + rem;
                 nextTurnTimer = setTimeout(showMoles, rem);
             }
+            if (pauseData.moleElapsed >= 0) {
+                // 일시정지 시간만큼 보정하여 경과 표시 정확도 유지
+                moleAppearTime = Date.now() - pauseData.moleElapsed;
+                startElapsedDisplay();
+            }
             pauseData = null;
         }
-        overlay.classList.add('hidden');
-        if (btn) btn.textContent = '⏸ 일시정지';
+        pauseOverlay.classList.add('hidden');
+        pauseBtn.textContent = '⏸ 일시정지';
     }
 }
 
-// ─── 실시간 경과시간 표시 ─────────────────────────────────────────────────────
+// ─── 실시간 경과시간 ──────────────────────────────────────────────────────────
 function startElapsedDisplay() {
     stopElapsedDisplay();
-    const el = document.getElementById('elapsedDisplay');
-    if (!el) return;
-    function tick() {
-        el.textContent = moleAppearTime > 0 ? Date.now() - moleAppearTime : 0;
+    if (!elElapsed) return;
+    const tick = () => {
+        elElapsed.textContent = moleAppearTime > 0 ? Date.now() - moleAppearTime : 0;
         elapsedRafId = requestAnimationFrame(tick);
-    }
+    };
     elapsedRafId = requestAnimationFrame(tick);
 }
 
 function stopElapsedDisplay() {
     if (elapsedRafId) { cancelAnimationFrame(elapsedRafId); elapsedRafId = null; }
-    const el = document.getElementById('elapsedDisplay');
-    if (el) el.textContent = '-';
+    if (elElapsed) elElapsed.textContent = '-';
 }
 
-// 키보드 단축키 (Esc / P)
+// ─── 키보드 단축키 (Esc / P) ──────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
-    if (gameActive && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) {
-        togglePause();
-    }
+    if (gameActive && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) togglePause();
 });
 
-// ─── 물총 이펙트 ─────────────────────────────────────────────────────────────
+// ─── 물총 이펙트 ──────────────────────────────────────────────────────────────
 function shootWater(targetEl) {
-    const gun      = document.getElementById('gun');
-    const muzzlePt = document.getElementById('muzzlePoint');
     if (!gun || !muzzlePt || isShooting) return;
     isShooting = true;
 
@@ -447,13 +395,12 @@ function shootWater(targetEl) {
     const tx = wr.left + wr.width  / 2;
     const ty = wr.top  + wr.height / 2;
 
-    // transform-origin이 총구이므로 회전 전에 읽으면 항상 정확한 위치
+    // transform-origin이 총구 → 회전 전에 읽어도 항상 정확한 위치
     const mr = muzzlePt.getBoundingClientRect();
     const mx = mr.left + mr.width  / 2;
     const my = mr.top  + mr.height / 2;
 
     const gunAng = Math.atan2(ty - my, tx - mx) * (180 / Math.PI);
-    // 좌측 타겟: 총을 좌우 반전 후 대칭 각도 적용 / 우측 타겟: 그대로
     gun.style.transform = tx < mx
         ? `scaleX(-1) rotate(${180 - gunAng}deg)`
         : `rotate(${gunAng}deg)`;
@@ -463,10 +410,9 @@ function shootWater(targetEl) {
 
     const stream = document.createElement('div');
     stream.className = 'water-stream';
-    const bott = window.innerHeight - my;
     Object.assign(stream.style, {
         left:       `${mx - 4}px`,
-        bottom:     `${bott}px`,
+        bottom:     `${window.innerHeight - my}px`,
         height:     '0px',
         background: 'linear-gradient(to top, rgba(0,191,255,0.95), rgba(135,206,250,0.5))',
         transform:  `rotate(${streamAng}deg)`,
@@ -484,10 +430,7 @@ function shootWater(targetEl) {
         stream.style.transition = 'opacity 0.12s';
         stream.style.opacity    = '0';
         setTimeout(() => stream.remove(), 150);
-        setTimeout(() => {
-            gun.style.transform = '';
-            isShooting = false;
-        }, 400);
+        setTimeout(() => { gun.style.transform = ''; isShooting = false; }, 400);
     }, 145);
 }
 
@@ -499,7 +442,7 @@ function waterSplash(cx, cy) {
             position:      'fixed',
             width:         `${sz}px`,
             height:        `${sz}px`,
-            background:    `rgba(${20 + Math.random()*40 | 0}, ${160 + Math.random()*70 | 0}, 255, 0.88)`,
+            background:    `rgba(${20 + Math.random()*40 | 0},${160 + Math.random()*70 | 0},255,0.88)`,
             borderRadius:  '50%',
             left:          `${cx - sz / 2}px`,
             top:           `${cy - sz / 2}px`,
@@ -511,17 +454,14 @@ function waterSplash(cx, cy) {
         const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
         const r = 16 + Math.random() * 40;
         drop.animate([
-            { transform: 'translate(0,0) scale(1)', opacity: 1 },
-            { transform: `translate(${Math.cos(a)*r}px, ${Math.sin(a)*r}px) scale(0)`, opacity: 0 }
-        ], {
-            duration: 280 + Math.random() * 220,
-            easing:   'ease-out',
-            fill:     'forwards',
-        }).onfinish = () => drop.remove();
+            { transform: 'translate(0,0) scale(1)',                                        opacity: 1 },
+            { transform: `translate(${Math.cos(a)*r}px,${Math.sin(a)*r}px) scale(0)`,     opacity: 0 },
+        ], { duration: 280 + Math.random() * 220, easing: 'ease-out', fill: 'forwards' })
+            .onfinish = () => drop.remove();
     }
 }
 
-// 초기화
+// ─── 초기화 ───────────────────────────────────────────────────────────────────
 updateBestDisplay();
 initGrid();
 scaleBoard();
