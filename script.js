@@ -67,6 +67,30 @@ const timeLimitDisplay = document.getElementById('timeLimit');
 const startScreen = document.getElementById('startScreen');
 const endScreen = document.getElementById('endScreen');
 
+// ─── 보드 스케일 ────────────────────────────────────────────────────────────────
+// 보드 고정 크기: --cell:120 × 4 + gap:10 × 3 + pad:20 × 2 = 550px
+const BOARD_SIZE = 550;
+// 물총 영역 높이: bottom 오프셋(24) + 총 높이(58) + 여유(10)
+const GUN_AREA_H = 92;
+
+function scaleBoard() {
+    const header    = document.getElementById('gameHeader');
+    const wrapper   = document.getElementById('boardWrapper');
+    const container = document.querySelector('.game-container');
+    if (!header || !wrapper || !container) return;
+
+    const headerH = header.getBoundingClientRect().height;
+    const availW  = window.innerWidth;
+    const availH  = window.innerHeight - headerH - GUN_AREA_H;
+
+    const scale = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
+
+    container.style.transform = `scale(${scale})`;
+    wrapper.style.height      = `${BOARD_SIZE * scale}px`;
+}
+
+window.addEventListener('resize', scaleBoard);
+
 // 그리드 초기화
 function initGrid() {
     grid.innerHTML = '';
@@ -85,32 +109,11 @@ function initGrid() {
             </div>
         `;
 
-        const burst = document.createElement('div');
-        burst.className = 'hit-burst';
-        for (let r = 0; r < 8; r++) {
-            const ray = document.createElement('div');
-            ray.className = 'burst-ray';
-            ray.style.setProperty('--i', r);
-            burst.appendChild(ray);
-        }
-
-        const stars = document.createElement('div');
-        stars.className = 'spin-stars';
-        for (let s = 0; s < 3; s++) {
-            const orbit = document.createElement('div');
-            orbit.className = 'star-orbit';
-            orbit.style.setProperty('--s', s);
-            orbit.innerHTML = '<span class="star-icon">★</span>';
-            stars.appendChild(orbit);
-        }
-
         const moleHole = document.createElement('div');
         moleHole.className = 'mole-hole';
         moleHole.appendChild(mole);
 
         cell.appendChild(moleHole);
-        cell.appendChild(burst);
-        cell.appendChild(stars);
         cell.addEventListener('click', () => handleClick(i));
         grid.appendChild(cell);
     }
@@ -201,12 +204,6 @@ function handleClick(index) {
     const reactionTime = Date.now() - moleAppearTime;
     const isSpy = mole.dataset.type === 'spy';
 
-    // 별/물음표 아이콘 미리 설정
-    const stars = cell.querySelector('.spin-stars');
-    stars.querySelectorAll('.star-icon').forEach(icon => {
-        icon.textContent = isSpy ? '?' : '★';
-    });
-
     // 물총 발사
     shootWater(cell);
 
@@ -227,20 +224,11 @@ function handleClick(index) {
             SFX.setBGMRate(SLOW_RATE);
         }, SLOW_START),
 
-        // 히트 지점: 정상 복귀 + 이펙트 발동
+        // 히트 지점: 정상 복귀
         setTimeout(() => {
             document.getAnimations().forEach(anim => { anim.playbackRate = 1; });
             SFX.setBGMRate(1);
             isSpy ? SFX.hitSpy() : SFX.hitNormal();
-
-            const burst = cell.querySelector('.hit-burst');
-            burst.classList.remove('pop');
-            void burst.offsetWidth;
-            burst.classList.add('pop');
-
-            stars.classList.remove('active');
-            void stars.offsetWidth;
-            stars.classList.add('active');
         }, HIT_WALL),
 
         // 이펙트 완료 후 정리 (stars: 0.65s, burst: 0.3s)
@@ -446,3 +434,4 @@ function waterSplash(cx, cy) {
 // 초기화
 updateBestDisplay();
 initGrid();
+scaleBoard();
