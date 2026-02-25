@@ -85,7 +85,7 @@ const getNextDelay = () => TURN_DELAY_MIN + Math.random() * TURN_DELAY_RNG;
 function scaleBoard() {
     if (!gameHeader || !boardWrapper || !gameContainer) return;
     const headerH = gameHeader.getBoundingClientRect().height;
-    const availW  = window.innerWidth - 32;
+    const availW  = window.innerWidth - 0;  // -0은 여백
     const availH  = document.body.clientHeight - headerH - GUN_AREA_H;
     const scale   = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
     gameContainer.style.transform = `scale(${scale})`;
