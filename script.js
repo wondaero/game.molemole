@@ -266,7 +266,7 @@ function handleClick(index) {
 
             if (isSpy) {
                 SFX.gameOver();
-                endGame('스파이 두더지를 클릭했습니다!');
+                endGame('스파이 두더지를 클릭했습니다!', reactionTime);
                 return;
             }
 
@@ -310,7 +310,13 @@ function startGame() {
 }
 
 // 게임 종료
-function endGame(reason) {
+// elapsedMs: 스파이 클릭 시 실제 반응 시간 전달, 시간초과 시 null(자동계산)
+function endGame(reason, elapsedMs = null) {
+    const currentTimeLimit = getTimeLimit();
+    const actualElapsed = elapsedMs !== null
+        ? elapsedMs
+        : (moleAppearTime > 0 ? Math.round(Date.now() - moleAppearTime) : 0);
+
     gameActive = false;
     isSlowMo = false;
     clearTimeout(turnTimer);
@@ -337,6 +343,11 @@ function endGame(reason) {
     document.getElementById('allTimeBest').textContent = best ? best.score : '-';
     document.getElementById('avgReaction').textContent = avgReaction;
     document.getElementById('bestReaction').textContent = bestReaction;
+
+    const stageLimitEl = document.getElementById('stageTimeLimit');
+    const elapsedEl    = document.getElementById('elapsedTime');
+    if (stageLimitEl) stageLimitEl.textContent = currentTimeLimit;
+    if (elapsedEl)    elapsedEl.textContent    = actualElapsed;
 
     const newRecordMsg = document.getElementById('newRecordMsg');
     if (isNewRecord) {
