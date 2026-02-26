@@ -285,6 +285,25 @@ body {
 .mole-nose::before { left: 3px; }
 .mole-nose::after  { right: 3px; }
 
+/* 이빨 */
+.mole-teeth {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 3px;
+    z-index: 4;
+}
+.mole-tooth {
+    width: 9px;
+    height: 11px;
+    background: #F5F0E8;
+    border-radius: 0 0 3px 3px;
+    border: 1px solid #D8D0C0;
+    border-top: none;
+}
+
 /* 스파이 안경 */
 .spy-glasses {
     position: absolute;
@@ -682,7 +701,7 @@ body {
     position: relative;
     margin: 0 auto 10px;
     overflow: hidden;
-    border-radius: 10px;
+    border-radius: 50%;
     background: #2a1f14;
 }
 .demo-mole.spy { background: #1e1428; }
@@ -692,7 +711,7 @@ body {
     height: 120px;
     top: 0;
     left: 0;
-    transform: scale(0.75);
+    transform: scale(0.75) translateY(24px);
     transform-origin: top left;
 }
 
