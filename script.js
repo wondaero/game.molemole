@@ -27,10 +27,6 @@ function saveBest(score) {
     return false;
 }
 
-function updateBestDisplay() {
-    const best = loadBest();
-    if (elBestScore) elBestScore.textContent = best ? best.score : '-';
-}
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
@@ -48,6 +44,7 @@ let reactionTimes     = [];
 let moleAppearTime    = 0;
 let gameActive        = false;
 let turnTimer         = null;
+let turnResolved      = false; // 클릭으로 이미 처리됐으면 true → 타이머 게임오버 차단
 let nextTurnTimer     = null;
 let isSlowMo          = false;
 let slowMoTimers      = [];
@@ -69,9 +66,7 @@ const grid             = document.getElementById('grid');
 const elScore          = document.getElementById('score');
 const elPrevRtWrap     = document.getElementById('prevRtWrap');
 const elPrevRtVal      = document.getElementById('prevRtVal');
-const elElapsed        = null; // 제거됨 (내부 추적은 moleAppearTime으로 유지)
-const elTimeLimit      = null; // 제거됨
-const elBestScore      = null; // 제거됨
+const elElapsed        = null; // 미연결 (moleAppearTime으로 내부 추적)
 const startScreen      = document.getElementById('startScreen');
 const endScreen        = document.getElementById('endScreen');
 const pauseOverlay     = document.getElementById('pauseOverlay');
@@ -311,6 +306,7 @@ function getRandomPositions(count) {
 // ─── 두더지 등장 ──────────────────────────────────────────────────────────────
 function showMoles() {
     if (!gameActive) return;
+    turnResolved = false;
 
     const { total, spies } = getMoleConfig();
     const positions = getRandomPositions(total);
@@ -350,7 +346,7 @@ function showMoles() {
     const timeLimit = getTimeLimit();
     turnTimerEndTime = Date.now() + timeLimit * 1000;
     turnTimer = setTimeout(() => {
-        if (gameActive) { SFX.gameOver(); endGame('시간 초과! 두더지를 클릭하지 못했습니다.'); }
+        if (gameActive && !turnResolved) { SFX.gameOver(); endGame('시간 초과! 두더지를 클릭하지 못했습니다.'); }
     }, timeLimit * 1000);
 }
 
@@ -361,6 +357,7 @@ function handleClick(index) {
     const mole = cachedMoles[index];
     if (!mole.classList.contains('show')) return;
 
+    turnResolved = true;
     clearTimeout(turnTimer);
     stopElapsedDisplay();
 
@@ -488,10 +485,10 @@ function startGame() {
     pauseData            = null;
     turnTimerEndTime     = 0;
     nextTurnTimerEndTime = 0;
+    turnResolved         = false;
 
     elScore.textContent = '0';
     if (elPrevRtWrap) elPrevRtWrap.classList.add('hidden');
-    updateBestDisplay();
 
     // 모든 오버레이 숨기고 게임 상태 push
     Object.values(PAGE_SCREENS).forEach(el => el && el.classList.add('hidden'));
@@ -550,7 +547,6 @@ function endGame(reason, elapsedMs = null) {
     document.getElementById('elapsedTime').textContent    = actualElapsed;
     document.getElementById('newRecordMsg').classList.toggle('hidden', !isNewRecord);
 
-    updateBestDisplay();
     endScreen.classList.remove('hidden');
 }
 
@@ -738,6 +734,5 @@ function waterSplash(cx, cy) {
 // 인트로를 히스토리 베이스로 설정
 history.replaceState({ page: 'intro' }, '');
 showPage('intro');
-updateBestDisplay();
 initGrid();
 scaleBoard();
