@@ -29,7 +29,7 @@ function saveBest(score) {
 
 function updateBestDisplay() {
     const best = loadBest();
-    elBestScore.textContent = best ? best.score : '-';
+    if (elBestScore) elBestScore.textContent = best ? best.score : '-';
 }
 
 // ─── 상수 ────────────────────────────────────────────────────────────────────
@@ -57,6 +57,7 @@ let elapsedRafId      = null;
 let pauseData         = null;
 let turnTimerEndTime  = 0;
 let nextTurnTimerEndTime = 0;
+let equippedWeapon    = 'hammer'; // 'hammer' | 'gun'
 
 // 캐시된 그리드 (initGrid 후 갱신)
 let cachedCells = [];
@@ -66,9 +67,11 @@ let cachedGifts = [];
 // ─── DOM 캐시 ─────────────────────────────────────────────────────────────────
 const grid             = document.getElementById('grid');
 const elScore          = document.getElementById('score');
-const elTimeLimit      = document.getElementById('timeLimit');
-const elBestScore      = document.getElementById('bestScore');
-const elElapsed        = document.getElementById('elapsedDisplay');
+const elPrevRtWrap     = document.getElementById('prevRtWrap');
+const elPrevRtVal      = document.getElementById('prevRtVal');
+const elElapsed        = null; // 제거됨 (내부 추적은 moleAppearTime으로 유지)
+const elTimeLimit      = null; // 제거됨
+const elBestScore      = null; // 제거됨
 const startScreen      = document.getElementById('startScreen');
 const endScreen        = document.getElementById('endScreen');
 const pauseOverlay     = document.getElementById('pauseOverlay');
@@ -96,6 +99,7 @@ function showPage(page) {
     Object.values(PAGE_SCREENS).forEach(el => el && el.classList.add('hidden'));
     if (PAGE_SCREENS[page]) PAGE_SCREENS[page].classList.remove('hidden');
     currentPage = page;
+    if (page === 'collection') renderCollection();
 }
 
 function navigateTo(page) {
@@ -121,6 +125,89 @@ window.addEventListener('popstate', (e) => {
     }
     showPage(page);
 });
+
+// ─── 콜렉션 데이터 ────────────────────────────────────────────────────────────
+const COLLECTION_DATA = {
+    normal: [
+        { id: 'w_hammer', cat: '무기',   emoji: '🔨', name: '뿅망치',      unlocked: true  },
+        { id: 'w_gun',    cat: '무기',   emoji: '🔫', name: '물총',        unlocked: false },
+        { id: 'w_net',    cat: '무기',   emoji: '🪤', name: '그물',        unlocked: false },
+        { id: 't_field',  cat: '테마',   emoji: '🌿', name: '들판 테마',   unlocked: true  },
+        { id: 't_snow',   cat: '테마',   emoji: '❄️', name: '설원 테마',   unlocked: false },
+        { id: 't_night',  cat: '테마',   emoji: '🌙', name: '야간 테마',   unlocked: false },
+        { id: 's_brown',  cat: '스킨',   emoji: '🟤', name: '기본 갈색',   unlocked: true  },
+        { id: 's_gray',   cat: '스킨',   emoji: '⬜', name: '회색 두더지', unlocked: false },
+        { id: 's_orange', cat: '스킨',   emoji: '🟠', name: '주황 두더지', unlocked: false },
+        { id: 'h_cap',    cat: '모자',   emoji: '🧢', name: '야구모자',    unlocked: false },
+        { id: 'h_tophat', cat: '모자',   emoji: '🎩', name: '실크햇',      unlocked: false },
+        { id: 'h_bow',    cat: '모자',   emoji: '🎀', name: '리본',        unlocked: false },
+        { id: 'h_crown',  cat: '모자',   emoji: '👑', name: '왕관',        unlocked: false },
+        { id: 'g_spy',    cat: '안경',   emoji: '🕶️', name: '클래식 선글', unlocked: true  },
+        { id: 'g_round',  cat: '안경',   emoji: '👓', name: '동글 안경',   unlocked: false },
+        { id: 'c_scarf',  cat: '의상',   emoji: '🧣', name: '목도리',      unlocked: false },
+        { id: 'c_coat',   cat: '의상',   emoji: '🧥', name: '코트',        unlocked: false },
+        { id: 'a_tie',    cat: '장신구', emoji: '👔', name: '넥타이',      unlocked: false },
+        { id: 'a_star',   cat: '장신구', emoji: '⭐', name: '별 브로치',   unlocked: false },
+        { id: 'e_water',  cat: '효과',   emoji: '💧', name: '물방울',      unlocked: true  },
+        { id: 'e_spark',  cat: '효과',   emoji: '✨', name: '별빛',        unlocked: false },
+    ],
+    hidden: [
+        { id: 'hw_gold',    cat: '무기',   emoji: '🌟', name: '황금 물총',     unlocked: false },
+        { id: 'hh_skull',   cat: '모자',   emoji: '💀', name: '해골 모자',     unlocked: false },
+        { id: 'hg_vip',     cat: '안경',   emoji: '🕶️', name: 'VIP 선글라스',  unlocked: false },
+        { id: 'ha_diamond', cat: '장신구', emoji: '💎', name: '다이아 브로치', unlocked: false },
+        { id: 'he_rainbow', cat: '효과',   emoji: '🌈', name: '무지개 이펙트', unlocked: false },
+    ],
+};
+
+let collState = { tab: 'normal', cat: '전체' };
+
+function renderCollection() {
+    const { tab, cat } = collState;
+    const items = COLLECTION_DATA[tab];
+    const cats  = ['전체', ...new Set(items.map(i => i.cat))];
+
+    // 카테고리 필터 렌더
+    const catsEl = document.getElementById('collCats');
+    if (catsEl) {
+        catsEl.innerHTML = '';
+        cats.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className   = 'coll-cat' + (c === cat ? ' active' : '');
+            btn.textContent = c;
+            btn.onclick = () => { collState.cat = c; renderCollection(); };
+            catsEl.appendChild(btn);
+        });
+    }
+
+    // 아이템 그리드 렌더
+    const gridEl = document.getElementById('collGrid');
+    if (!gridEl) return;
+    const filtered = cat === '전체' ? items : items.filter(i => i.cat === cat);
+    gridEl.innerHTML = '';
+    filtered.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'coll-item'
+            + (item.unlocked ? ' unlocked' : '')
+            + (tab === 'hidden' ? ' hidden-item' : '');
+        div.innerHTML = `
+            <div class="coll-item-emoji">${item.unlocked ? item.emoji : '🔒'}</div>
+            <div class="coll-item-name">${item.unlocked ? item.name : '???'}</div>
+        `;
+        gridEl.appendChild(div);
+    });
+
+    // 탭 버튼 active 상태 업데이트
+    document.querySelectorAll('.coll-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+    });
+}
+
+function switchCollTab(tab) {
+    collState.tab = tab;
+    collState.cat = '전체';
+    renderCollection();
+}
 
 // ─── 선물 아이템 (플레이스홀더) ───────────────────────────────────────────────
 const GIFT_ITEMS = [
@@ -261,7 +348,6 @@ function showMoles() {
     SFX.moleAppear();
 
     const timeLimit = getTimeLimit();
-    elTimeLimit.textContent = timeLimit;
     turnTimerEndTime = Date.now() + timeLimit * 1000;
     turnTimer = setTimeout(() => {
         if (gameActive) { SFX.gameOver(); endGame('시간 초과! 두더지를 클릭하지 못했습니다.'); }
@@ -282,63 +368,77 @@ function handleClick(index) {
     const isSpy        = mole.dataset.type === 'spy';
     const cell         = cachedCells[index];
 
-    shootWater(cell);
     cell.style.zIndex = '100';
-    isSlowMo = true;
+    isSlowMo = true; // 중복 클릭 방지 (무기 무관)
 
-    slowMoTimers = [
-        setTimeout(() => {
-            document.getAnimations().forEach(a => { a.playbackRate = SLOW_RATE; });
-            SFX.setBGMRate(SLOW_RATE);
-        }, SLOW_START_MS),
+    if (equippedWeapon === 'gun') {
+        shootWater(cell);
+        slowMoTimers = [
+            setTimeout(() => {
+                document.getAnimations().forEach(a => { a.playbackRate = SLOW_RATE; });
+                SFX.setBGMRate(SLOW_RATE);
+            }, SLOW_START_MS),
+            setTimeout(() => {
+                document.getAnimations().forEach(a => { a.playbackRate = 1; });
+                SFX.setBGMRate(1);
+                isSpy ? SFX.hitSpy() : SFX.hitNormal();
+            }, HIT_WALL_MS),
+            setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), HIT_WALL_MS + 900),
+        ];
+    } else {
+        // 망치
+        swingHammer(cell, index);
+        slowMoTimers = [
+            setTimeout(() => { isSpy ? SFX.hitSpy() : SFX.hitNormal(); }, 150),
+            setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), 500),
+        ];
+    }
+}
 
-        setTimeout(() => {
-            document.getAnimations().forEach(a => { a.playbackRate = 1; });
-            SFX.setBGMRate(1);
-            isSpy ? SFX.hitSpy() : SFX.hitNormal();
-        }, HIT_WALL_MS),
+// ─── 히트 결과 처리 (무기 공통) ───────────────────────────────────────────────
+function resolveHit(index, isSpy, reactionTime, cell) {
+    isSlowMo = false;
+    cell.style.zIndex = '';
+    cachedMoles.forEach(m => {
+        m.classList.remove('show', 'spy', 'normal');
+        m.dataset.type = '';
+    });
+    // 맞은 칸 제외한 나머지 선물은 내림
+    cachedGifts.forEach((g, idx) => {
+        if (idx !== index) {
+            g.classList.remove('show');
+            g.style.pointerEvents = '';
+        }
+    });
 
-        setTimeout(() => {
-            isSlowMo = false;
-            cell.style.zIndex = '';
-            cachedMoles.forEach(m => {
-                m.classList.remove('show', 'spy', 'normal');
-                m.dataset.type = '';
-            });
-            // 맞은 칸 제외한 나머지 선물은 내림
-            cachedGifts.forEach((g, idx) => {
-                if (idx !== index) {
-                    g.classList.remove('show');
-                    g.style.pointerEvents = '';
-                }
-            });
+    if (isSpy) {
+        cachedGifts[index].classList.remove('show');
+        SFX.gameOver();
+        endGame('스파이 두더지를 클릭했습니다!', reactionTime);
+        return;
+    }
 
-            if (isSpy) {
-                cachedGifts[index].classList.remove('show'); // 스파이는 선물 없음
-                SFX.gameOver();
-                endGame('스파이 두더지를 클릭했습니다!', reactionTime);
-                return;
-            }
+    score++;
+    elScore.textContent = score;
+    reactionTimes.push(reactionTime);
+    if (elPrevRtWrap && elPrevRtVal) {
+        elPrevRtVal.textContent = reactionTime;
+        elPrevRtWrap.classList.remove('hidden');
+    }
 
-            score++;
-            elScore.textContent = score;
-            reactionTimes.push(reactionTime);
-
-            // 선물 확률: 탄 × 0.5% (score가 이미 증가된 상태)
-            const giftChance = score * 0.005;
-            const startNext = () => {
-                const delay = getNextDelay();
-                nextTurnTimerEndTime = Date.now() + delay;
-                nextTurnTimer = setTimeout(showMoles, delay);
-            };
-            if (Math.random() < giftChance) {
-                showGift(index, startNext);
-            } else {
-                cachedGifts[index].classList.remove('show'); // 선물 없으면 내림
-                startNext();
-            }
-        }, HIT_WALL_MS + 900),
-    ];
+    // 선물 확률: 탄 × 0.5% (score가 이미 증가된 상태)
+    const giftChance = score * 0.005;
+    const startNext = () => {
+        const delay = getNextDelay();
+        nextTurnTimerEndTime = Date.now() + delay;
+        nextTurnTimer = setTimeout(showMoles, delay);
+    };
+    if (Math.random() < giftChance) {
+        showGift(index, startNext);
+    } else {
+        cachedGifts[index].classList.remove('show');
+        startNext();
+    }
 }
 
 // ─── 선물 ─────────────────────────────────────────────────────────────────────
@@ -389,8 +489,8 @@ function startGame() {
     turnTimerEndTime     = 0;
     nextTurnTimerEndTime = 0;
 
-    elScore.textContent     = '0';
-    elTimeLimit.textContent = getTimeLimit();
+    elScore.textContent = '0';
+    if (elPrevRtWrap) elPrevRtWrap.classList.add('hidden');
     updateBestDisplay();
 
     // 모든 오버레이 숨기고 게임 상태 push
@@ -403,6 +503,9 @@ function startGame() {
 
     pauseBtn.classList.remove('hidden');
     pauseBtn.textContent = '⏸ 일시정지';
+
+    // 무기 UI: 물총은 장착 시에만 표시
+    document.querySelector('.gun-wrap')?.classList.toggle('hidden', equippedWeapon !== 'gun');
 
     const delay = getNextDelay();
     nextTurnTimerEndTime = Date.now() + delay;
@@ -524,6 +627,37 @@ function stopElapsedDisplay() {
 document.addEventListener('keydown', (e) => {
     if (gameActive && (e.key === 'Escape' || e.key === 'p' || e.key === 'P')) togglePause();
 });
+
+// ─── 망치 이펙트 ──────────────────────────────────────────────────────────────
+function swingHammer(cell, moleIndex) {
+    const hammer = document.createElement('div');
+    hammer.className = 'hammer';
+    hammer.innerHTML = `<div class="hammer-handle"></div><div class="hammer-head"></div>`;
+    cell.appendChild(hammer);
+
+    // 스윙 애니메이션: 왼쪽 위에서 오른쪽으로 내려치기
+    hammer.animate([
+        { transform: 'translateX(-50%) rotate(-65deg)', offset: 0,    easing: 'cubic-bezier(0.4,0,1,1)' },
+        { transform: 'translateX(-50%) rotate(20deg)',  offset: 0.55, easing: 'ease-out' },
+        { transform: 'translateX(-50%) rotate(-8deg)',  offset: 0.75 },
+        { transform: 'translateX(-50%) rotate(5deg)',   offset: 0.9  },
+        { transform: 'translateX(-50%) rotate(-2deg)',  offset: 1    },
+    ], { duration: 280, fill: 'forwards' });
+
+    // 히트 시점 (약 150ms): 두더지 찌그러짐
+    setTimeout(() => {
+        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
+        if (moleChar) {
+            moleChar.animate([
+                { transform: 'translateY(24px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
+                { transform: 'translateY(38px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
+                { transform: 'translateY(24px) scaleY(1)',    offset: 1 },
+            ], { duration: 250 });
+        }
+    }, 150);
+
+    setTimeout(() => hammer.remove(), 650);
+}
 
 // ─── 물총 이펙트 ──────────────────────────────────────────────────────────────
 function shootWater(targetEl) {

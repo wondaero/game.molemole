@@ -83,10 +83,15 @@
     </div>
 
     <!-- ── 콜렉션 ── -->
-    <div class="sub-screen hidden" id="collectionScreen">
+    <div class="sub-screen collection-screen hidden" id="collectionScreen">
         <button class="screen-back-btn" onclick="history.back()">← 뒤로</button>
-        <h2>콜렉션</h2>
-        <p style="opacity:0.6;margin-top:12px">준비 중입니다...</p>
+        <h2 class="coll-title">콜렉션</h2>
+        <div class="coll-tabs">
+            <button class="coll-tab active" data-tab="normal" onclick="switchCollTab('normal')">일반</button>
+            <button class="coll-tab" data-tab="hidden" onclick="switchCollTab('hidden')">히든 🔒</button>
+        </div>
+        <div class="coll-cats" id="collCats"></div>
+        <div class="coll-grid" id="collGrid"></div>
     </div>
 
     <!-- ── 설정 ── -->
@@ -116,12 +121,9 @@
 
     <!-- ── 게임 화면 ── -->
     <div id="gameHeader">
-        <h1>스파이 찾(임시)</h1>
-        <div class="info-bar">
-            <div class="info-item">점수: <span id="score">0</span></div>
-            <div class="info-item">최고: <span id="bestScore">-</span></div>
-            <div class="info-item">제한시간: <span id="timeLimit">0.8</span>초</div>
-            <div class="info-item">경과: <span id="elapsedDisplay">-</span>ms</div>
+        <div class="stage-bar">
+            <div class="stage-num"><span id="score">0</span>탄</div>
+            <div class="prev-rt hidden" id="prevRtWrap">이전 <span id="prevRtVal">-</span>ms</div>
         </div>
         <button id="pauseBtn" class="pause-btn hidden" onclick="togglePause()">⏸ 일시정지</button>
     </div>
@@ -132,7 +134,7 @@
     </div>
 
     <!-- ── 물총 ── -->
-    <div class="gun-wrap">
+    <div class="gun-wrap hidden">
         <div class="gun" id="gun">
             <div class="gun-tank"></div>
             <div class="gun-barrel"></div>
