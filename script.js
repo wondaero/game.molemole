@@ -61,6 +61,7 @@ let nextTurnTimerEndTime = 0;
 // 캐시된 그리드 (initGrid 후 갱신)
 let cachedCells = [];
 let cachedMoles = [];
+let cachedGifts = [];
 
 // ─── DOM 캐시 ─────────────────────────────────────────────────────────────────
 const grid          = document.getElementById('grid');
@@ -77,6 +78,18 @@ const muzzlePt      = document.getElementById('muzzlePoint');
 const boardWrapper  = document.getElementById('boardWrapper');
 const gameHeader    = document.getElementById('gameHeader');
 const gameContainer = document.querySelector('.game-container');
+
+// ─── 선물 아이템 (플레이스홀더) ───────────────────────────────────────────────
+const GIFT_ITEMS = [
+    { name: '물총 스킨', emoji: '🔫' },
+    { name: '뿅망치 스킨', emoji: '🔨' },
+    { name: '그물망 스킨', emoji: '🪤' },
+    { name: '별 장식', emoji: '⭐' },
+    { name: '왕관', emoji: '👑' },
+    { name: '선글라스', emoji: '🕶️' },
+    { name: '리본', emoji: '🎀' },
+    { name: '다이아몬드', emoji: '💎' },
+];
 
 // ─── 유틸 ────────────────────────────────────────────────────────────────────
 const getNextDelay = () => TURN_DELAY_MIN + Math.random() * TURN_DELAY_RNG;
@@ -99,6 +112,7 @@ function initGrid() {
     grid.innerHTML = '';
     cachedCells = [];
     cachedMoles = [];
+    cachedGifts = [];
 
     for (let i = 0; i < 16; i++) {
         const cell = document.createElement('div');
@@ -106,11 +120,31 @@ function initGrid() {
 
         const mole = document.createElement('div');
         mole.className = 'mole';
-        mole.innerHTML = '<div class="person-content"><span class="person-text"></span></div>';
+        mole.innerHTML = `
+          <div class="mole-char">
+            <div class="mole-ear left"></div>
+            <div class="mole-ear right"></div>
+            <div class="mole-body"></div>
+            <div class="mole-head">
+              <div class="spy-glasses">
+                <div class="glass left"></div>
+                <div class="glass-bridge"></div>
+                <div class="glass right"></div>
+              </div>
+              <div class="mole-eye left"><div class="pupil"></div></div>
+              <div class="mole-eye right"><div class="pupil"></div></div>
+              <div class="mole-snout"><div class="mole-nose"></div></div>
+            </div>
+          </div>`;
+
+        const gift = document.createElement('div');
+        gift.className   = 'gift';
+        gift.textContent = '🎁';
 
         const hole = document.createElement('div');
         hole.className = 'mole-hole';
-        hole.appendChild(mole);
+        hole.appendChild(gift);  // 선물 먼저 (두더지 뒤)
+        hole.appendChild(mole);  // 두더지가 선물 위에
 
         cell.appendChild(hole);
         cell.addEventListener('click', () => handleClick(i));
@@ -118,23 +152,29 @@ function initGrid() {
 
         cachedCells.push(cell);
         cachedMoles.push(mole);
+        cachedGifts.push(gift);
     }
 }
 
 // ─── 난이도 ───────────────────────────────────────────────────────────────────
+// score 0(1탄)=2.0s, 매 탄 0.1s 감소, score 15(16탄)=0.5s 도달 후 0.01s씩 감소, 최소 0.1s
 function getTimeLimit() {
-    if (score >= 31) return Math.max(0.1, parseFloat((0.4 - (score - 30) * 0.001).toFixed(3)));
-    if (score >= 21) return 0.4;
-    if (score >= 16) return 0.5;
-    if (score >= 11) return 0.8;
-    if (score >= 6)  return 1.0;
-    return 1.5;
+    if (score <= 15) return parseFloat((2.0 - score * 0.1).toFixed(2));
+    return Math.max(0.1, parseFloat((0.5 - (score - 15) * 0.01).toFixed(3)));
 }
 
-// ─── 랜덤 위치 3개 선택 ───────────────────────────────────────────────────────
-function getRandomPositions() {
+// ─── 두더지 구성 (탄 수에 따라 나중에 확장) ──────────────────────────────────
+function getMoleConfig() {
+    // TODO: 탄 수(score)에 따라 total/spies 늘리기
+    // 예) score >= 30: { total: 4, spies: 2 }
+    //     score >= 50: { total: 4, spies: 3 }
+    return { total: 3, spies: 1 };
+}
+
+// ─── 랜덤 위치 선택 ───────────────────────────────────────────────────────────
+function getRandomPositions(count) {
     const positions = new Set();
-    while (positions.size < 3) positions.add(Math.floor(Math.random() * 16));
+    while (positions.size < count) positions.add(Math.floor(Math.random() * 16));
     return [...positions];
 }
 
@@ -142,28 +182,34 @@ function getRandomPositions() {
 function showMoles() {
     if (!gameActive) return;
 
-    const positions = getRandomPositions();
-    const spyIndex  = Math.floor(Math.random() * 3);
+    const { total, spies } = getMoleConfig();
+    const positions = getRandomPositions(total);
+    // 스파이 위치: positions 중 앞 spies개
+    const spySet = new Set(
+        [...positions].sort(() => Math.random() - 0.5).slice(0, spies)
+    );
 
     // 전체 리셋
     cachedMoles.forEach(m => {
         m.classList.remove('show', 'spy', 'normal');
         m.dataset.type = '';
     });
+    cachedGifts.forEach(g => {
+        g.classList.remove('show');
+        g.style.pointerEvents = '';
+    });
 
-    // 등장
-    positions.forEach((pos, idx) => {
-        const mole   = cachedMoles[pos];
-        const textEl = mole.querySelector('.person-text');
+    // 등장 (두더지 + 선물 같이 올라옴)
+    positions.forEach((pos) => {
+        const mole = cachedMoles[pos];
         mole.classList.add('show');
-        if (idx === spyIndex) {
+        cachedGifts[pos].classList.add('show'); // 두더지 뒤에서 같이 올라옴
+        if (spySet.has(pos)) {
             mole.classList.add('spy');
             mole.dataset.type = 'spy';
-            if (textEl) textEl.textContent = '스파이';
         } else {
             mole.classList.add('normal');
             mole.dataset.type = 'normal';
-            if (textEl) textEl.textContent = '사람';
         }
     });
 
@@ -216,8 +262,16 @@ function handleClick(index) {
                 m.classList.remove('show', 'spy', 'normal');
                 m.dataset.type = '';
             });
+            // 맞은 칸 제외한 나머지 선물은 내림
+            cachedGifts.forEach((g, idx) => {
+                if (idx !== index) {
+                    g.classList.remove('show');
+                    g.style.pointerEvents = '';
+                }
+            });
 
             if (isSpy) {
+                cachedGifts[index].classList.remove('show'); // 스파이는 선물 없음
                 SFX.gameOver();
                 endGame('스파이 두더지를 클릭했습니다!', reactionTime);
                 return;
@@ -227,11 +281,51 @@ function handleClick(index) {
             elScore.textContent = score;
             reactionTimes.push(reactionTime);
 
-            const delay = getNextDelay();
-            nextTurnTimerEndTime = Date.now() + delay;
-            nextTurnTimer = setTimeout(showMoles, delay);
+            // 선물 확률: 탄 × 0.5% (score가 이미 증가된 상태)
+            const giftChance = score * 0.005;
+            const startNext = () => {
+                const delay = getNextDelay();
+                nextTurnTimerEndTime = Date.now() + delay;
+                nextTurnTimer = setTimeout(showMoles, delay);
+            };
+            if (Math.random() < giftChance) {
+                showGift(index, startNext);
+            } else {
+                cachedGifts[index].classList.remove('show'); // 선물 없으면 내림
+                startNext();
+            }
         }, HIT_WALL_MS + 900),
     ];
+}
+
+// ─── 선물 ─────────────────────────────────────────────────────────────────────
+function showGift(index, onCollect) {
+    const item   = GIFT_ITEMS[Math.floor(Math.random() * GIFT_ITEMS.length)];
+    const giftEl = cachedGifts[index];
+    // 구멍에는 항상 선물상자만 표시
+    giftEl.textContent    = '🎁';
+    giftEl.style.pointerEvents = 'auto'; // 클릭 가능
+
+    function onClick(e) {
+        e.stopPropagation();
+        giftEl.classList.remove('show');
+        giftEl.style.pointerEvents = '';
+        giftEl.removeEventListener('click', onClick);
+        showGiftPopup(item, onCollect); // 팝업에서 실제 아이템 공개
+    }
+    giftEl.addEventListener('click', onClick);
+}
+
+function showGiftPopup(item, onCollect) {
+    const popup   = document.getElementById('giftPopup');
+    document.getElementById('giftEmoji').textContent = item.emoji;
+    document.getElementById('giftName').textContent  = item.name;
+    popup.classList.remove('hidden');
+
+    document.getElementById('giftClose').onclick = () => {
+        popup.classList.add('hidden');
+        onCollect();
+    };
 }
 
 // ─── 게임 시작 ────────────────────────────────────────────────────────────────

@@ -16,11 +16,19 @@
         <div class="mole-demo">
             <div class="demo-item">
                 <div class="demo-mole">
-                    <div class="mole-body">
-                        <div class="mole-face">
-                            <div class="mole-eye left"></div>
-                            <div class="mole-eye right"></div>
-                            <div class="mole-nose"></div>
+                    <div class="mole-char">
+                        <div class="mole-ear left"></div>
+                        <div class="mole-ear right"></div>
+                        <div class="mole-body"></div>
+                        <div class="mole-head">
+                            <div class="spy-glasses">
+                                <div class="glass left"></div>
+                                <div class="glass-bridge"></div>
+                                <div class="glass right"></div>
+                            </div>
+                            <div class="mole-eye left"><div class="pupil"></div></div>
+                            <div class="mole-eye right"><div class="pupil"></div></div>
+                            <div class="mole-snout"><div class="mole-nose"></div></div>
                         </div>
                     </div>
                 </div>
@@ -28,16 +36,19 @@
             </div>
             <div class="demo-item">
                 <div class="demo-mole spy">
-                    <div class="mole-body">
-                        <div class="mole-face">
+                    <div class="mole-char">
+                        <div class="mole-ear left"></div>
+                        <div class="mole-ear right"></div>
+                        <div class="mole-body"></div>
+                        <div class="mole-head">
                             <div class="spy-glasses">
                                 <div class="glass left"></div>
-                                <div class="glass right"></div>
                                 <div class="glass-bridge"></div>
+                                <div class="glass right"></div>
                             </div>
-                            <div class="mole-eye left"></div>
-                            <div class="mole-eye right"></div>
-                            <div class="mole-nose"></div>
+                            <div class="mole-eye left"><div class="pupil"></div></div>
+                            <div class="mole-eye right"><div class="pupil"></div></div>
+                            <div class="mole-snout"><div class="mole-nose"></div></div>
                         </div>
                     </div>
                 </div>
@@ -100,6 +111,16 @@
             <div class="gun-muzzle"></div>
             <div class="gun-grip"></div>
             <div class="muzzle-point" id="muzzlePoint"></div>
+        </div>
+    </div>
+
+    <!-- 선물 팝업 -->
+    <div class="gift-popup hidden" id="giftPopup">
+        <div class="gift-popup-box">
+            <span class="gift-popup-emoji" id="giftEmoji">🎁</span>
+            <h3>선물 획득!</h3>
+            <p id="giftName">새 아이템</p>
+            <button class="btn" id="giftClose">수집하기</button>
         </div>
     </div>
 
