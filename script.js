@@ -64,20 +64,63 @@ let cachedMoles = [];
 let cachedGifts = [];
 
 // ─── DOM 캐시 ─────────────────────────────────────────────────────────────────
-const grid          = document.getElementById('grid');
-const elScore       = document.getElementById('score');
-const elTimeLimit   = document.getElementById('timeLimit');
-const elBestScore   = document.getElementById('bestScore');
-const elElapsed     = document.getElementById('elapsedDisplay');
-const startScreen   = document.getElementById('startScreen');
-const endScreen     = document.getElementById('endScreen');
-const pauseOverlay  = document.getElementById('pauseOverlay');
-const pauseBtn      = document.getElementById('pauseBtn');
-const gun           = document.getElementById('gun');
-const muzzlePt      = document.getElementById('muzzlePoint');
-const boardWrapper  = document.getElementById('boardWrapper');
-const gameHeader    = document.getElementById('gameHeader');
-const gameContainer = document.querySelector('.game-container');
+const grid             = document.getElementById('grid');
+const elScore          = document.getElementById('score');
+const elTimeLimit      = document.getElementById('timeLimit');
+const elBestScore      = document.getElementById('bestScore');
+const elElapsed        = document.getElementById('elapsedDisplay');
+const startScreen      = document.getElementById('startScreen');
+const endScreen        = document.getElementById('endScreen');
+const pauseOverlay     = document.getElementById('pauseOverlay');
+const pauseBtn         = document.getElementById('pauseBtn');
+const gun              = document.getElementById('gun');
+const muzzlePt         = document.getElementById('muzzlePoint');
+const boardWrapper     = document.getElementById('boardWrapper');
+const gameHeader       = document.getElementById('gameHeader');
+const gameContainer    = document.querySelector('.game-container');
+const introScreen      = document.getElementById('introScreen');
+const collectionScreen = document.getElementById('collectionScreen');
+const settingsScreen   = document.getElementById('settingsScreen');
+
+// ─── 페이지 네비게이션 ────────────────────────────────────────────────────────
+const PAGE_SCREENS = {
+    intro:      introScreen,
+    rules:      startScreen,
+    collection: collectionScreen,
+    settings:   settingsScreen,
+    end:        endScreen,
+};
+let currentPage = 'intro';
+
+function showPage(page) {
+    Object.values(PAGE_SCREENS).forEach(el => el && el.classList.add('hidden'));
+    if (PAGE_SCREENS[page]) PAGE_SCREENS[page].classList.remove('hidden');
+    currentPage = page;
+}
+
+function navigateTo(page) {
+    if (page === 'intro') {
+        // 뒤로가기 버튼 또는 메인메뉴 버튼: history 엔트리를 intro로 교체
+        showPage('intro');
+        history.replaceState({ page: 'intro' }, '');
+    } else {
+        history.pushState({ page }, '');
+        showPage(page);
+    }
+}
+
+// 브라우저/기기 뒤로가기
+window.addEventListener('popstate', (e) => {
+    const page = e.state?.page;
+    if (!page) return; // 앱 진입 이전 히스토리 → 실제 브라우저 뒤로가기
+
+    if (gameActive) {
+        // 게임 중 뒤로가기 → 게임 종료 후 인트로
+        endGame('게임을 나갔습니다.');
+        history.replaceState({ page: 'intro' }, '');
+    }
+    showPage(page);
+});
 
 // ─── 선물 아이템 (플레이스홀더) ───────────────────────────────────────────────
 const GIFT_ITEMS = [
@@ -350,8 +393,10 @@ function startGame() {
     elTimeLimit.textContent = getTimeLimit();
     updateBestDisplay();
 
-    startScreen.classList.add('hidden');
-    endScreen.classList.add('hidden');
+    // 모든 오버레이 숨기고 게임 상태 push
+    Object.values(PAGE_SCREENS).forEach(el => el && el.classList.add('hidden'));
+    history.pushState({ page: 'game' }, '');
+    currentPage = 'game';
 
     initGrid();
     SFX.playBGM();
@@ -556,6 +601,9 @@ function waterSplash(cx, cy) {
 }
 
 // ─── 초기화 ───────────────────────────────────────────────────────────────────
+// 인트로를 히스토리 베이스로 설정
+history.replaceState({ page: 'intro' }, '');
+showPage('intro');
 updateBestDisplay();
 initGrid();
 scaleBoard();

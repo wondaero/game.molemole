@@ -3,13 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>스파이를 찾아라</title>
+    <title>몰래몰레</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <!-- 시작 화면 -->
-    <div class="start-screen" id="startScreen">
+    <!-- ── 인트로 (메인메뉴) ── -->
+    <div class="intro-screen" id="introScreen">
+        <h1 class="intro-title">몰래몰레</h1>
+        <p class="intro-sub">두더지를 잡아라!</p>
+        <nav class="intro-nav">
+            <button class="intro-btn primary" onclick="navigateTo('rules')">게임 시작</button>
+            <button class="intro-btn" onclick="navigateTo('collection')">콜렉션</button>
+            <button class="intro-btn" onclick="navigateTo('settings')">설정</button>
+            <button class="intro-btn exit" disabled>종료</button>
+        </nav>
+    </div>
+
+    <!-- ── 게임 방법 (구 시작화면) ── -->
+    <div class="start-screen hidden" id="startScreen">
+        <button class="screen-back-btn" onclick="history.back()">← 뒤로</button>
         <h2>몰래몰레</h2>
         <p>두더지를 잡아라! 하지만 스파이를 조심해!</p>
 
@@ -69,7 +82,21 @@
         <button class="btn" onclick="startGame()">게임 시작</button>
     </div>
 
-    <!-- 게임 종료 화면 -->
+    <!-- ── 콜렉션 ── -->
+    <div class="sub-screen hidden" id="collectionScreen">
+        <button class="screen-back-btn" onclick="history.back()">← 뒤로</button>
+        <h2>콜렉션</h2>
+        <p style="opacity:0.6;margin-top:12px">준비 중입니다...</p>
+    </div>
+
+    <!-- ── 설정 ── -->
+    <div class="sub-screen hidden" id="settingsScreen">
+        <button class="screen-back-btn" onclick="history.back()">← 뒤로</button>
+        <h2>설정</h2>
+        <p style="opacity:0.6;margin-top:12px">준비 중입니다...</p>
+    </div>
+
+    <!-- ── 게임 종료 화면 ── -->
     <div class="end-screen hidden" id="endScreen">
         <h2>게임 오버!</h2>
         <p id="endReason"></p>
@@ -84,9 +111,10 @@
             <p>두더지 등장 후 경과: <span id="elapsedTime">-</span>ms</p>
         </div>
         <button class="btn" onclick="startGame()">다시 시작</button>
+        <button class="btn" style="margin-top:10px;background:rgba(255,255,255,0.15);font-size:1rem" onclick="navigateTo('intro')">메인메뉴</button>
     </div>
 
-    <!-- 게임 화면 -->
+    <!-- ── 게임 화면 ── -->
     <div id="gameHeader">
         <h1>스파이 찾(임시)</h1>
         <div class="info-bar">
@@ -103,7 +131,7 @@
         </div>
     </div>
 
-    <!-- 물총 -->
+    <!-- ── 물총 ── -->
     <div class="gun-wrap">
         <div class="gun" id="gun">
             <div class="gun-tank"></div>
@@ -114,7 +142,7 @@
         </div>
     </div>
 
-    <!-- 선물 팝업 -->
+    <!-- ── 선물 팝업 ── -->
     <div class="gift-popup hidden" id="giftPopup">
         <div class="gift-popup-box">
             <span class="gift-popup-emoji" id="giftEmoji">🎁</span>
@@ -124,7 +152,7 @@
         </div>
     </div>
 
-    <!-- 일시정지 오버레이 -->
+    <!-- ── 일시정지 오버레이 ── -->
     <div class="pause-overlay hidden" id="pauseOverlay">
         <h2>⏸ 일시정지</h2>
         <button class="btn" onclick="togglePause()">▶ 계속하기</button>

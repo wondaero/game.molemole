@@ -309,6 +309,98 @@ h1 {
     flex-shrink: 0;
 }
 
+/* ── 인트로 (메인메뉴) ── */
+.intro-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    color: #fff;
+}
+
+.intro-title {
+    font-size: 3.5rem;
+    font-weight: bold;
+    color: #e8c87a;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.6);
+    margin-bottom: 6px;
+}
+
+.intro-sub {
+    font-size: 1.05rem;
+    opacity: 0.65;
+    margin-bottom: 44px;
+}
+
+.intro-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 220px;
+}
+
+.intro-btn {
+    width: 100%;
+    padding: 16px;
+    font-size: 1.15rem;
+    font-family: inherit;
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+.intro-btn:hover {
+    background: rgba(255,255,255,0.18);
+    transform: scale(1.03);
+}
+.intro-btn.primary {
+    background: #4CAF50;
+    border-color: #4CAF50;
+    font-weight: bold;
+}
+.intro-btn.primary:hover { background: #45a049; }
+.intro-btn.exit          { opacity: 0.35; cursor: default; }
+.intro-btn.exit:hover    { background: rgba(255,255,255,0.08); transform: none; }
+
+/* ── 서브 스크린 (콜렉션, 설정) ── */
+.sub-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    color: #fff;
+}
+
+.sub-screen h2 { font-size: 2rem; }
+
+/* ── 화면 공통 뒤로가기 버튼 ── */
+.screen-back-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 8px 18px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.screen-back-btn:hover { background: rgba(255,255,255,0.22); }
+
 .start-screen, .end-screen {
     position: fixed;
     top: 0;
