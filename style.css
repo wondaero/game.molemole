@@ -12,7 +12,7 @@
 
 body {
     font-family: 'Pretendard', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(to bottom, #131a08, #1c2a0c, #131a08);
+    background: linear-gradient(to bottom, #1e2d0d, #283d10, #1e2d0d);
     height: 100vh;
     height: 100dvh; /* 모바일 주소창 제외한 실제 뷰포트 */
     overflow: hidden;
@@ -62,7 +62,7 @@ body {
 
 
 .game-container {
-    background: rgba(0, 0, 0, 0.25);
+    background: rgba(0, 0, 0, 0.12);
     padding: var(--container-pad);
     border-radius: 16px;
     width:  calc(var(--cell) * 4 + var(--gap) * 3 + var(--container-pad) * 2);
@@ -527,6 +527,18 @@ body {
 .coll-item.unlocked:hover {
     background: rgba(76,175,80,0.22);
     transform: scale(1.04);
+}
+
+.coll-item.equipped {
+    border-color: rgba(255, 215, 0, 0.8);
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.25);
+}
+
+.coll-item-badge {
+    font-size: 0.62rem;
+    color: #FFD700;
+    font-weight: bold;
+    margin-top: 2px;
 }
 
 .coll-item.hidden-item {
