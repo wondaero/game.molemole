@@ -31,7 +31,7 @@ function saveBest(score) {
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
-const BOARD_TILT_DEG   = 18;    // rotateX 기울기 (perspective 효과)
+const BOARD_TILT_DEG   = 36;    // rotateX 기울기 (perspective 효과)
 const PERSPECTIVE_PX   = 600;   // CSS perspective 값 (boardWrapper와 일치)
 const TURN_DELAY_MIN   = 2000;
 const TURN_DELAY_RNG   = 3000;
@@ -339,9 +339,10 @@ function scaleBoard() {
     const tiltRad = BOARD_TILT_DEG * Math.PI / 180;
     const d = PERSPECTIVE_PX;
 
-    // perspective + rotateX → board bottom이 viewer쪽으로 튀어나와 실제 점유 높이 증가
-    // 정확한 screen 점유 높이: (h * cosθ) * d / (d - h * sinθ) = availH 로 scale 역산
-    const scaleByW = availW / BOARD_SIZE;
+    // perspective + rotateX → bottom row가 viewer에 가까워져 실제 점유 너비·높이 모두 증가
+    // width: bottom row 실 너비 = BOARD*s*d/(d - BOARD*s*sinθ) ≤ availW → 역산
+    const scaleByW = (availW * d) / (BOARD_SIZE * (d + availW * Math.sin(tiltRad)));
+    // height: screen 점유 높이 = BOARD*s*cosθ*d/(d - BOARD*s*sinθ) = availH → 역산
     const scaleByH = (availH * d) / (BOARD_SIZE * (d * Math.cos(tiltRad) + availH * Math.sin(tiltRad)));
     const scale    = Math.min(scaleByW, scaleByH);
 
@@ -1138,68 +1139,113 @@ function waterSplash(cx, cy) {
 // ─── 핀조명 이펙트 ────────────────────────────────────────────────────────────
 function strikeSpotlight(cell, moleIndex) {
     const cr = cell.getBoundingClientRect();
-    const cx = cr.left + cr.width  / 2;
-    const cy = cr.top  + cr.height / 2;
-    const startR = 160;
+    const mx = cr.left + cr.width  / 2;
+    const my = cr.top  + cr.height / 2;
 
-    // box-shadow trick: 원 내부 투명 + 외부 어두운 오버레이
-    const spot = document.createElement('div');
-    Object.assign(spot.style, {
-        position: 'fixed',
-        width:  `${startR * 2}px`,
-        height: `${startR * 2}px`,
-        borderRadius: '50%',
-        left: `${cx - startR}px`,
-        top:  `${cy - startR}px`,
-        boxShadow: '0 0 0 9999px rgba(0,0,0,0.9)',
-        pointerEvents: 'none',
-        zIndex: '80',
-        transformOrigin: 'center center',
-        opacity: '0',
+    // 램프 고정 위치: 화면 좌측 상단
+    const lampX = window.innerWidth * 0.18;
+    const lampY = 14;
+    const W = window.innerWidth, H = window.innerHeight;
+
+    // 빔 방향 벡터 & 법선
+    const dx = mx - lampX, dy = my - lampY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const nx = -dy / dist, ny = dx / dist;
+
+    // 빔 사다리꼴 꼭짓점 (램프 출구 startR → 타겟 endR)
+    const startR = 11, endR = 68;
+    const pts = [
+        [lampX + nx * startR, lampY + ny * startR],
+        [lampX - nx * startR, lampY - ny * startR],
+        [mx   - nx * endR,   my   - ny * endR  ],
+        [mx   + nx * endR,   my   + ny * endR  ],
+    ];
+
+    // ── 어두운 오버레이 ──────────────────────────────────────────────────────
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+        position: 'fixed', inset: '0',
+        background: 'rgba(0,0,0,0.88)',
+        pointerEvents: 'none', zIndex: '80', opacity: '0',
     });
-    document.body.appendChild(spot);
+    document.body.appendChild(overlay);
+    overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, fill: 'forwards' });
 
-    // 페이드인 후 서서히 좁아지는 스포트라이트
-    const narrowAnim = spot.animate([
-        { transform: 'scale(1)',    opacity: 0 },
-        { transform: 'scale(1)',    opacity: 1, offset: 0.06 },
-        { transform: 'scale(0.28)', opacity: 1 },
-    ], { duration: SPOT_HIT_MS * 1.3, easing: 'ease-in', fill: 'forwards' });
-
-    // 조명 링 (두더지 위 강조)
-    const ring = document.createElement('div');
-    Object.assign(ring.style, {
-        position: 'fixed',
-        width: '90px', height: '90px',
-        borderRadius: '50%',
-        left: `${cx - 45}px`, top: `${cy - 45}px`,
-        border: '3px solid rgba(255,255,180,0.0)',
-        pointerEvents: 'none', zIndex: '81',
+    // ── SVG: 사다리꼴 빔 + 타원 조명 ─────────────────────────────────────────
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('width', W); svg.setAttribute('height', H);
+    Object.assign(svg.style, {
+        position: 'fixed', left: '0', top: '0',
+        pointerEvents: 'none', zIndex: '81', opacity: '0',
     });
-    document.body.appendChild(ring);
-    ring.animate([
-        { borderColor: 'rgba(255,255,180,0)',   transform: 'scale(1.4)' },
-        { borderColor: 'rgba(255,255,180,0.7)', transform: 'scale(1)',   offset: 0.3 },
-        { borderColor: 'rgba(255,255,180,0.7)', transform: 'scale(1)' },
-    ], { duration: SPOT_HIT_MS, fill: 'forwards' });
+    document.body.appendChild(svg);
 
-    // 히트 시점
+    // 그라디언트: 램프→타겟으로 점점 밝아짐
+    const defs = document.createElementNS(svgNS, 'defs');
+    const grad = document.createElementNS(svgNS, 'linearGradient');
+    grad.setAttribute('id', 'spot-beam-grad');
+    grad.setAttribute('gradientUnits', 'userSpaceOnUse');
+    grad.setAttribute('x1', lampX); grad.setAttribute('y1', lampY);
+    grad.setAttribute('x2', mx);   grad.setAttribute('y2', my);
+    [['0%', 'rgba(255,255,160,0.03)'], ['100%', 'rgba(255,255,160,0.32)']].forEach(([off, col]) => {
+        const s = document.createElementNS(svgNS, 'stop');
+        s.setAttribute('offset', off); s.setAttribute('stop-color', col); grad.appendChild(s);
+    });
+    defs.appendChild(grad);
+    svg.appendChild(defs);
+
+    // 빔 사다리꼴
+    const beam = document.createElementNS(svgNS, 'polygon');
+    beam.setAttribute('points', pts.map(p => p.join(',')).join(' '));
+    beam.setAttribute('fill', 'url(#spot-beam-grad)');
+    svg.appendChild(beam);
+
+    // 타겟 타원 (원근감 있는 조명 풀)
+    const ell = document.createElementNS(svgNS, 'ellipse');
+    ell.setAttribute('cx', mx); ell.setAttribute('cy', my + 6);
+    ell.setAttribute('rx', endR * 0.95); ell.setAttribute('ry', endR * 0.5);
+    ell.setAttribute('fill', 'rgba(255,255,200,0.22)');
+    svg.appendChild(ell);
+
+    svg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay: 40, fill: 'forwards' });
+
+    // ── 램프 픽스처 ───────────────────────────────────────────────────────────
+    // CW 회전량: 램프 기본 방향(아래) → 타겟 방향
+    const rotateDeg = Math.atan2(dx, dy) * 180 / Math.PI;
+    const lampSize = 52;
+    const lampEl = document.createElement('div');
+    Object.assign(lampEl.style, {
+        position: 'fixed',
+        left: `${lampX - lampSize / 2}px`,
+        top:  `${lampY}px`,
+        width: `${lampSize}px`, height: `${lampSize}px`,
+        pointerEvents: 'none', zIndex: '82',
+        transformOrigin: `${lampSize / 2}px 0px`,
+        transform: `rotate(${rotateDeg}deg)`,
+    });
+    lampEl.innerHTML = `<svg width="${lampSize}" height="${lampSize}" viewBox="0 0 52 52">
+        <line x1="26" y1="0" x2="26" y2="10" stroke="#aaa" stroke-width="3" stroke-linecap="round"/>
+        <polygon points="12,10 40,10 46,40 6,40" fill="#4a3a2a" stroke="#7a6a5a" stroke-width="1.5"/>
+        <polygon points="16,12 36,12 38,22 14,22" fill="#6a5040" opacity="0.6"/>
+        <ellipse cx="26" cy="40" rx="20" ry="5" fill="#2a1a0a"/>
+        <ellipse cx="26" cy="40" rx="15" ry="3.5" fill="rgba(255,255,160,0.75)"/>
+    </svg>`;
+    document.body.appendChild(lampEl);
+
+    // ── 히트 ─────────────────────────────────────────────────────────────────
     setTimeout(() => {
-        narrowAnim.cancel();
-
-        // 밝은 플래시
         const flash = document.createElement('div');
         Object.assign(flash.style, {
             position: 'fixed', inset: '0',
-            background: 'rgba(255,255,210,0.55)',
+            background: 'rgba(255,255,180,0.52)',
             pointerEvents: 'none', zIndex: '90',
         });
         document.body.appendChild(flash);
         flash.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 200, easing: 'ease-out', fill: 'forwards' })
+            { duration: 220, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
 
-        // 두더지 찌그러짐
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
             moleChar.animate([
@@ -1209,13 +1255,11 @@ function strikeSpotlight(cell, moleIndex) {
             ], { duration: 250 });
         }
 
-        // 오버레이 & 링 제거
-        spot.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 320, easing: 'ease-out', fill: 'forwards' })
-            .onfinish = () => spot.remove();
-        ring.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 200, fill: 'forwards' })
-            .onfinish = () => ring.remove();
+        [overlay, svg, lampEl].forEach(el => {
+            el.animate([{ opacity: 1 }, { opacity: 0 }],
+                { duration: 320, easing: 'ease-out', fill: 'forwards' })
+                .onfinish = () => el.remove();
+        });
     }, SPOT_HIT_MS);
 }
 
