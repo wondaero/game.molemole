@@ -32,6 +32,7 @@ function saveBest(score) {
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
 const BOARD_TILT_DEG   = 18;    // rotateX 기울기 (perspective 효과)
+const PERSPECTIVE_PX   = 600;   // CSS perspective 값 (boardWrapper와 일치)
 const TURN_DELAY_MIN   = 2000;
 const TURN_DELAY_RNG   = 3000;
 const SLOW_RATE        = 0.1;
@@ -153,39 +154,39 @@ window.addEventListener('popstate', (e) => {
 const COLLECTION_DATA = {
     normal: [
         { id: 'w_hammer', cat: '무기',   emoji: '🔨', name: '뿅망치',      unlocked: true  },
-        { id: 'w_gun',    cat: '무기',   emoji: '🔫', name: '물총',        unlocked: false },
-        { id: 'w_net',       cat: '무기',   emoji: '🪤', name: '그물',        unlocked: false },
-        { id: 'w_lightning', cat: '무기',   emoji: '⚡', name: '번개',        unlocked: false },
-        { id: 'w_bomb',      cat: '무기',   emoji: '💣', name: '폭탄',        unlocked: false },
-        { id: 'w_balloon',   cat: '무기',   emoji: '🎈', name: '물풍선',      unlocked: false },
-        { id: 'w_spotlight', cat: '무기',   emoji: '🔦', name: '핀조명',      unlocked: false },
-        { id: 'w_ufo',       cat: '무기',   emoji: '🛸', name: 'UFO빔',       unlocked: false },
-        { id: 'w_target',    cat: '무기',   emoji: '🎯', name: '타겟',        unlocked: false },
+        { id: 'w_gun',    cat: '무기',   emoji: '🔫', name: '물총',        unlocked: true},
+        { id: 'w_net',       cat: '무기',   emoji: '🪤', name: '그물',        unlocked: true},
+        { id: 'w_lightning', cat: '무기',   emoji: '⚡', name: '번개',        unlocked: true},
+        { id: 'w_bomb',      cat: '무기',   emoji: '💣', name: '폭탄',        unlocked: true},
+        { id: 'w_balloon',   cat: '무기',   emoji: '🎈', name: '물풍선',      unlocked: true},
+        { id: 'w_spotlight', cat: '무기',   emoji: '🔦', name: '핀조명',      unlocked: true},
+        { id: 'w_ufo',       cat: '무기',   emoji: '🛸', name: 'UFO빔',       unlocked: true},
+        { id: 'w_target',    cat: '무기',   emoji: '🎯', name: '타겟',        unlocked: true},
         { id: 't_field',  cat: '테마',   emoji: '🌿', name: '들판 테마',   unlocked: true  },
-        { id: 't_snow',   cat: '테마',   emoji: '❄️', name: '설원 테마',   unlocked: false },
-        { id: 't_night',  cat: '테마',   emoji: '🌙', name: '야간 테마',   unlocked: false },
+        { id: 't_snow',   cat: '테마',   emoji: '❄️', name: '설원 테마',   unlocked: true},
+        { id: 't_night',  cat: '테마',   emoji: '🌙', name: '야간 테마',   unlocked: true},
         { id: 's_brown',  cat: '스킨',   emoji: '🟤', name: '기본 갈색',   unlocked: true  },
-        { id: 's_gray',   cat: '스킨',   emoji: '⬜', name: '회색 두더지', unlocked: false },
-        { id: 's_orange', cat: '스킨',   emoji: '🟠', name: '주황 두더지', unlocked: false },
-        { id: 'h_cap',    cat: '모자',   emoji: '🧢', name: '야구모자',    unlocked: false },
-        { id: 'h_tophat', cat: '모자',   emoji: '🎩', name: '실크햇',      unlocked: false },
-        { id: 'h_bow',    cat: '모자',   emoji: '🎀', name: '리본',        unlocked: false },
-        { id: 'h_crown',  cat: '모자',   emoji: '👑', name: '왕관',        unlocked: false },
+        { id: 's_gray',   cat: '스킨',   emoji: '⬜', name: '회색 두더지', unlocked: true},
+        { id: 's_orange', cat: '스킨',   emoji: '🟠', name: '주황 두더지', unlocked: true},
+        { id: 'h_cap',    cat: '모자',   emoji: '🧢', name: '야구모자',    unlocked: true},
+        { id: 'h_tophat', cat: '모자',   emoji: '🎩', name: '실크햇',      unlocked: true},
+        { id: 'h_bow',    cat: '모자',   emoji: '🎀', name: '리본',        unlocked: true},
+        { id: 'h_crown',  cat: '모자',   emoji: '👑', name: '왕관',        unlocked: true},
         { id: 'g_spy',    cat: '안경',   emoji: '🕶️', name: '클래식 선글', unlocked: true  },
-        { id: 'g_round',  cat: '안경',   emoji: '👓', name: '동글 안경',   unlocked: false },
-        { id: 'c_scarf',  cat: '의상',   emoji: '🧣', name: '목도리',      unlocked: false },
-        { id: 'c_coat',   cat: '의상',   emoji: '🧥', name: '코트',        unlocked: false },
-        { id: 'a_tie',    cat: '장신구', emoji: '👔', name: '넥타이',      unlocked: false },
-        { id: 'a_star',   cat: '장신구', emoji: '⭐', name: '별 브로치',   unlocked: false },
+        { id: 'g_round',  cat: '안경',   emoji: '👓', name: '동글 안경',   unlocked: true},
+        { id: 'c_scarf',  cat: '의상',   emoji: '🧣', name: '목도리',      unlocked: true},
+        { id: 'c_coat',   cat: '의상',   emoji: '🧥', name: '코트',        unlocked: true},
+        { id: 'a_tie',    cat: '장신구', emoji: '👔', name: '넥타이',      unlocked: true},
+        { id: 'a_star',   cat: '장신구', emoji: '⭐', name: '별 브로치',   unlocked: true},
         { id: 'e_water',  cat: '효과',   emoji: '💧', name: '물방울',      unlocked: true  },
-        { id: 'e_spark',  cat: '효과',   emoji: '✨', name: '별빛',        unlocked: false },
+        { id: 'e_spark',  cat: '효과',   emoji: '✨', name: '별빛',        unlocked: true},
     ],
     hidden: [
-        { id: 'hw_gold',    cat: '무기',   emoji: '🌟', name: '황금 물총',     unlocked: false },
-        { id: 'hh_skull',   cat: '모자',   emoji: '💀', name: '해골 모자',     unlocked: false },
-        { id: 'hg_vip',     cat: '안경',   emoji: '🕶️', name: 'VIP 선글라스',  unlocked: false },
-        { id: 'ha_diamond', cat: '장신구', emoji: '💎', name: '다이아 브로치', unlocked: false },
-        { id: 'he_rainbow', cat: '효과',   emoji: '🌈', name: '무지개 이펙트', unlocked: false },
+        { id: 'hw_gold',    cat: '무기',   emoji: '🌟', name: '황금 물총',     unlocked: true},
+        { id: 'hh_skull',   cat: '모자',   emoji: '💀', name: '해골 모자',     unlocked: true},
+        { id: 'hg_vip',     cat: '안경',   emoji: '🕶️', name: 'VIP 선글라스',  unlocked: true},
+        { id: 'ha_diamond', cat: '장신구', emoji: '💎', name: '다이아 브로치', unlocked: true},
+        { id: 'he_rainbow', cat: '효과',   emoji: '🌈', name: '무지개 이펙트', unlocked: true},
     ],
 };
 
@@ -333,12 +334,21 @@ const getNextDelay = () => TURN_DELAY_MIN + Math.random() * TURN_DELAY_RNG;
 function scaleBoard() {
     if (!gameHeader || !boardWrapper || !gameContainer) return;
     const headerH = gameHeader.getBoundingClientRect().height;
-    const availW  = window.innerWidth - 0;  // -0은 여백
-    const availH  = document.body.clientHeight - headerH - GUN_AREA_H;
-    const scale   = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
+    const availW  = window.innerWidth - 48;  // 좌우 여백 24px씩
+    const availH  = document.body.clientHeight - headerH - GUN_AREA_H - 14; // 헤더 하단 여백
+    const tiltRad = BOARD_TILT_DEG * Math.PI / 180;
+    const d = PERSPECTIVE_PX;
+
+    // perspective + rotateX → board bottom이 viewer쪽으로 튀어나와 실제 점유 높이 증가
+    // 정확한 screen 점유 높이: (h * cosθ) * d / (d - h * sinθ) = availH 로 scale 역산
+    const scaleByW = availW / BOARD_SIZE;
+    const scaleByH = (availH * d) / (BOARD_SIZE * (d * Math.cos(tiltRad) + availH * Math.sin(tiltRad)));
+    const scale    = Math.min(scaleByW, scaleByH);
+
     gameContainer.style.transform = `scale(${scale}) rotateX(${BOARD_TILT_DEG}deg)`;
-    // rotateX로 수직 압축되므로 실제 점유 높이 보정 (cos(θ) ≈ 0.95 @ 18deg)
-    boardWrapper.style.height     = `${BOARD_SIZE * scale * Math.cos(BOARD_TILT_DEG * Math.PI / 180)}px`;
+    // 실제 screen 점유 높이 (perspective 보정)
+    const screenH = (BOARD_SIZE * scale * Math.cos(tiltRad)) * d / (d - BOARD_SIZE * scale * Math.sin(tiltRad));
+    boardWrapper.style.height = `${screenH}px`;
 }
 
 window.addEventListener('resize', scaleBoard);
