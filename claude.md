@@ -1,5 +1,13 @@
 게임 이름: 몰래몰레 (molemole)
 
+## 워크플로우 규칙
+
+> **변경사항이 생길 때마다 이 파일(CLAUDE.md)과 spec.md를 항상 함께 업데이트할 것**
+> - `CLAUDE.md`: 기술 구현 상세 (AI용)
+> - `spec.md`: 기획/기능 현황 (사용자용)
+
+---
+
 ## 파일 구조
 
 ```
@@ -91,11 +99,19 @@ script.js    ← 게임 로직
 | target | 100 | 420 | 970 |
 | claw | 130 | 480 | 1330 |
 
+### 인트로 화면 레이아웃
+- `.intro-content`: 타이틀(`intro-title`) + 버튼 4개(`intro-nav`) — 상단 72px 패딩으로 위쪽 고정
+- `.intro-moles`: 하단에 두더지 구멍 4개 행. `margin-top: auto`로 바닥에 붙임, `margin-bottom: -36px`으로 일부 화면 밖
+  - 각 `.intro-mole-hole` 90px 원형, `margin-left: -20px` 겹침, z-index 4→1 (왼쪽이 위)
+  - 3번째(`:nth-child(3)`)에 `.spy` 클래스 → 안경 표시
+  - 내부 `.mole-char`: `scale(0.75) translateY(18px)`, `transform-origin: top left`
+
 ### 보드 스케일
 - `BOARD_SIZE = 550px` (cell 120×4 + gap 10×3 + pad 20×2)
 - `scaleBoard()`: `min(availW, availH) / BOARD_SIZE` 단순 scale
 - `availW = innerWidth - 48` (좌우 24px 여백), `availH = innerHeight - headerH - GUN_AREA_H(110) - 14`
 - `gameContainer.style.transform = scale(s)`, `boardWrapper.style.height = BOARD_SIZE * s`
+- 엄지존 배치: `freeH = availH - BOARD_SIZE*s` → `gameHeader.style.marginTop = freeH * 0.65` (남는 공간 65% 위로)
 
 ### 일시정지 / 게임 중단
 - `togglePause()`: 두더지 등장 중·slomo 중 불가. pauseData로 타이머 저장·복원
