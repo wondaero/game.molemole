@@ -31,6 +31,7 @@ function saveBest(score) {
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
+const BOARD_TILT_DEG   = 18;    // rotateX 기울기 (perspective 효과)
 const TURN_DELAY_MIN   = 2000;
 const TURN_DELAY_RNG   = 3000;
 const SLOW_RATE        = 0.1;
@@ -335,8 +336,9 @@ function scaleBoard() {
     const availW  = window.innerWidth - 0;  // -0은 여백
     const availH  = document.body.clientHeight - headerH - GUN_AREA_H;
     const scale   = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
-    gameContainer.style.transform = `scale(${scale})`;
-    boardWrapper.style.height     = `${BOARD_SIZE * scale}px`;
+    gameContainer.style.transform = `scale(${scale}) rotateX(${BOARD_TILT_DEG}deg)`;
+    // rotateX로 수직 압축되므로 실제 점유 높이 보정 (cos(θ) ≈ 0.95 @ 18deg)
+    boardWrapper.style.height     = `${BOARD_SIZE * scale * Math.cos(BOARD_TILT_DEG * Math.PI / 180)}px`;
 }
 
 window.addEventListener('resize', scaleBoard);
@@ -801,10 +803,19 @@ document.addEventListener('keydown', (e) => {
 
 // ─── 망치 이펙트 ──────────────────────────────────────────────────────────────
 function swingHammer(cell, moleIndex) {
+    const cr = cell.getBoundingClientRect();
+    const cx = cr.left + cr.width / 2;
+
     const hammer = document.createElement('div');
     hammer.className = 'hammer';
     hammer.innerHTML = `<div class="hammer-handle"></div><div class="hammer-head"></div>`;
-    cell.appendChild(hammer);
+
+    // 다른 무기들과 동일하게 body에 fixed 배치
+    hammer.style.position = 'fixed';
+    hammer.style.top  = `${cr.top - 50}px`;
+    hammer.style.left = `${cx}px`;
+
+    document.body.appendChild(hammer);
 
     // 스윙 애니메이션: 왼쪽 위에서 오른쪽으로 내려치기
     hammer.animate([
