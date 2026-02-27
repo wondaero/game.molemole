@@ -10,14 +10,73 @@
 <body>
     <!-- ── 인트로 (메인메뉴) ── -->
     <div class="intro-screen" id="introScreen">
-        <h1 class="intro-title">몰래몰레</h1>
-        <p class="intro-sub">두더지를 잡아라!</p>
-        <nav class="intro-nav">
-            <button class="intro-btn primary" onclick="navigateTo('rules')">게임 시작</button>
-            <button class="intro-btn" onclick="navigateTo('collection')">콜렉션</button>
-            <button class="intro-btn" onclick="navigateTo('settings')">설정</button>
-            <button class="intro-btn exit" disabled>종료</button>
-        </nav>
+        <div class="intro-content">
+            <h1 class="intro-title">몰래몰레</h1>
+            <nav class="intro-nav">
+                <button class="intro-btn primary" onclick="navigateTo('rules')">게임 시작</button>
+                <button class="intro-btn" onclick="navigateTo('collection')">콜렉션</button>
+                <button class="intro-btn" onclick="navigateTo('settings')">설정</button>
+                <button class="intro-btn exit" disabled>종료</button>
+            </nav>
+        </div>
+        <div class="intro-moles">
+            <!-- 일반 두더지 -->
+            <div class="intro-mole-hole">
+                <div class="mole-char">
+                    <div class="mole-ear left"></div><div class="mole-ear right"></div>
+                    <div class="mole-body"></div>
+                    <div class="mole-head">
+                        <div class="spy-glasses"><div class="glass left"></div><div class="glass-bridge"></div><div class="glass right"></div></div>
+                        <div class="mole-eye left"><div class="pupil"></div></div>
+                        <div class="mole-eye right"><div class="pupil"></div></div>
+                        <div class="mole-snout"><div class="mole-nose"></div></div>
+                        <div class="mole-teeth"><div class="mole-tooth"></div><div class="mole-tooth"></div></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 일반 두더지 -->
+            <div class="intro-mole-hole">
+                <div class="mole-char">
+                    <div class="mole-ear left"></div><div class="mole-ear right"></div>
+                    <div class="mole-body"></div>
+                    <div class="mole-head">
+                        <div class="spy-glasses"><div class="glass left"></div><div class="glass-bridge"></div><div class="glass right"></div></div>
+                        <div class="mole-eye left"><div class="pupil"></div></div>
+                        <div class="mole-eye right"><div class="pupil"></div></div>
+                        <div class="mole-snout"><div class="mole-nose"></div></div>
+                        <div class="mole-teeth"><div class="mole-tooth"></div><div class="mole-tooth"></div></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 스파이 두더지 (3번째) -->
+            <div class="intro-mole-hole spy">
+                <div class="mole-char">
+                    <div class="mole-ear left"></div><div class="mole-ear right"></div>
+                    <div class="mole-body"></div>
+                    <div class="mole-head">
+                        <div class="spy-glasses"><div class="glass left"></div><div class="glass-bridge"></div><div class="glass right"></div></div>
+                        <div class="mole-eye left"><div class="pupil"></div></div>
+                        <div class="mole-eye right"><div class="pupil"></div></div>
+                        <div class="mole-snout"><div class="mole-nose"></div></div>
+                        <div class="mole-teeth"><div class="mole-tooth"></div><div class="mole-tooth"></div></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 일반 두더지 -->
+            <div class="intro-mole-hole">
+                <div class="mole-char">
+                    <div class="mole-ear left"></div><div class="mole-ear right"></div>
+                    <div class="mole-body"></div>
+                    <div class="mole-head">
+                        <div class="spy-glasses"><div class="glass left"></div><div class="glass-bridge"></div><div class="glass right"></div></div>
+                        <div class="mole-eye left"><div class="pupil"></div></div>
+                        <div class="mole-eye right"><div class="pupil"></div></div>
+                        <div class="mole-snout"><div class="mole-nose"></div></div>
+                        <div class="mole-teeth"><div class="mole-tooth"></div><div class="mole-tooth"></div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ── 게임 방법 (구 시작화면) ── -->

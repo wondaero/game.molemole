@@ -63,6 +63,11 @@ const TARGET_SLOWSTART_MS = 100;
 const TARGET_HIT_MS       = 420;
 const TARGET_RESOLVE_MS   = TARGET_HIT_MS + 550;
 
+// ── 갈고리 타이밍 ─────────────────────────────────────────────────────────────
+const CLAW_SLOWSTART_MS  = 130;
+const CLAW_HIT_MS        = 480;
+const CLAW_RESOLVE_MS    = CLAW_HIT_MS + 850;
+
 // ─── 게임 상태 ────────────────────────────────────────────────────────────────
 let score             = 0;
 let reactionTimes     = [];
@@ -160,6 +165,7 @@ const COLLECTION_DATA = {
         { id: 'w_spotlight', cat: '무기',   emoji: '🔦', name: '핀조명',      unlocked: true},
         { id: 'w_ufo',       cat: '무기',   emoji: '🛸', name: 'UFO빔',       unlocked: true},
         { id: 'w_target',    cat: '무기',   emoji: '🎯', name: '타겟',        unlocked: true},
+        { id: 'w_claw',      cat: '무기',   emoji: '🦾', name: '인형뽑기',    unlocked: true},
         { id: 't_field',  cat: '테마',   emoji: '🌿', name: '들판 테마',   unlocked: true  },
         { id: 't_snow',   cat: '테마',   emoji: '❄️', name: '설원 테마',   unlocked: true},
         { id: 't_night',  cat: '테마',   emoji: '🌙', name: '야간 테마',   unlocked: true},
@@ -279,6 +285,7 @@ const WEAPON_ID_MAP = {
     'w_spotlight': 'spotlight',
     'w_ufo':       'ufo',
     'w_target':    'target',
+    'w_claw':      'claw',
 };
 
 function loadEquipped() {
@@ -338,6 +345,11 @@ function scaleBoard() {
 
     gameContainer.style.transform = `scale(${scale})`;
     boardWrapper.style.height = `${BOARD_SIZE * scale}px`;
+
+    // 보드를 아래쪽(엄지존)으로 이동: 남는 세로 공간의 65%를 헤더 위 여백으로
+    const boardH = BOARD_SIZE * scale;
+    const freeH  = availH - boardH;
+    gameHeader.style.marginTop = `${Math.max(0, freeH * 0.65)}px`;
 }
 
 window.addEventListener('resize', scaleBoard);
@@ -537,6 +549,15 @@ function handleClick(index) {
                 setTimeout(slowDown, TARGET_SLOWSTART_MS),
                 setTimeout(() => { slowUp(); onHit(); }, TARGET_HIT_MS),
                 setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), TARGET_RESOLVE_MS),
+            ];
+            break;
+
+        case 'claw':
+            strikeClaw(cell, index);
+            slowMoTimers = [
+                setTimeout(slowDown, CLAW_SLOWSTART_MS),
+                setTimeout(() => { slowUp(); onHit(); }, CLAW_HIT_MS),
+                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), CLAW_RESOLVE_MS),
             ];
             break;
 
@@ -1272,12 +1293,114 @@ function strikeSpotlight(cell, moleIndex) {
     }, SPOT_HIT_MS);
 }
 
+// ─── 인형뽑기 갈고리 이펙트 ───────────────────────────────────────────────────
+function strikeClaw(cell, moleIndex) {
+    const cr      = cell.getBoundingClientRect();
+    const cx      = cr.left + cr.width / 2;
+    const targetY = cr.top + cr.height * 0.3; // 갈고리 목표: 셀 상단~중앙
+
+    const wireH = 140;
+    const clawH = 50;
+    const wrapH = wireH + clawH;
+    const startY      = -wrapH - 5;           // wrap 하단이 화면 위 5px에 걸침
+    const descendDist = targetY - startY - wrapH; // = targetY + 5
+
+    const PAUSE_DUR   = 80;
+    const totalDur    = CLAW_RESOLVE_MS + 500;
+    const descendFrac = CLAW_HIT_MS / totalDur;
+    const pauseFrac   = (CLAW_HIT_MS + PAUSE_DUR) / totalDur;
+
+    const openSVG = `<svg width="56" height="${clawH}" viewBox="0 0 56 ${clawH}" style="overflow:visible;display:block">
+        <rect x="18" y="0" width="20" height="8" rx="4" fill="#888"/>
+        <path d="M 22,8 C 7,22 5,35 10,${clawH}" stroke="#bbb" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 28,8 L 28,${clawH}" stroke="#bbb" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 34,8 C 49,22 51,35 46,${clawH}" stroke="#bbb" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </svg>`;
+
+    const closedSVG = `<svg width="56" height="${clawH}" viewBox="0 0 56 ${clawH}" style="overflow:visible;display:block">
+        <rect x="18" y="0" width="20" height="8" rx="4" fill="#888"/>
+        <path d="M 26,8 C 20,20 19,32 22,${clawH}" stroke="#bbb" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 28,8 L 28,${clawH}" stroke="#bbb" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M 30,8 C 36,20 37,32 34,${clawH}" stroke="#bbb" stroke-width="5" fill="none" stroke-linecap="round"/>
+    </svg>`;
+
+    // ── DOM ───────────────────────────────────────────────────────────────────
+    const wrap = document.createElement('div');
+    Object.assign(wrap.style, {
+        position: 'fixed',
+        left: `${cx}px`, top: `${startY}px`,
+        width: '56px',
+        transform: 'translateX(-50%)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        pointerEvents: 'none', zIndex: '85',
+    });
+
+    const wireEl = document.createElement('div');
+    Object.assign(wireEl.style, {
+        width: '4px', height: `${wireH}px`,
+        background: 'linear-gradient(to bottom, rgba(120,120,120,0.4), rgba(180,180,180,0.95))',
+        borderRadius: '2px', flexShrink: '0',
+    });
+    wrap.appendChild(wireEl);
+
+    const clawEl = document.createElement('div');
+    clawEl.innerHTML = openSVG;
+    wrap.appendChild(clawEl);
+    document.body.appendChild(wrap);
+
+    // ── 내려오기 → 정지 → 위로 올라가기 (단일 애니메이션) ────────────────────
+    wrap.animate([
+        { transform: 'translateX(-50%) translateY(0px)',               offset: 0,           easing: 'ease-in' },
+        { transform: `translateX(-50%) translateY(${descendDist}px)`,  offset: descendFrac, easing: 'linear'  },
+        { transform: `translateX(-50%) translateY(${descendDist}px)`,  offset: pauseFrac,   easing: 'ease-in' },
+        { transform: 'translateX(-50%) translateY(-700px)',            offset: 1            },
+    ], { duration: totalDur, fill: 'forwards' })
+        .onfinish = () => wrap.remove();
+
+    // ── 갈고리 닫힘 + 두더지 잡기 ───────────────────────────────────────────
+    setTimeout(() => {
+        clawEl.innerHTML = closedSVG;
+
+        // 두더지 빨려올라감 (fill:forwards → resolveHit 후 cancel로 초기화)
+        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
+        let upAnim = null;
+        if (moleChar) {
+            upAnim = moleChar.animate([
+                { transform: 'translateY(24px) scale(1)',    opacity: 1               },
+                { transform: 'translateY(-20px) scale(0.8)', opacity: 0.7, offset: 0.3 },
+                { transform: 'translateY(-80px) scale(0.3)', opacity: 0               },
+            ], { duration: 500, easing: 'ease-in', fill: 'forwards' });
+        }
+        setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} },
+            CLAW_RESOLVE_MS - CLAW_HIT_MS + 50);
+
+        // 잡는 순간 플래시
+        const flash = document.createElement('div');
+        Object.assign(flash.style, {
+            position: 'fixed', inset: '0',
+            background: 'rgba(255,240,180,0.38)',
+            pointerEvents: 'none', zIndex: '90',
+        });
+        document.body.appendChild(flash);
+        flash.animate([{ opacity: 1 }, { opacity: 0 }],
+            { duration: 180, easing: 'ease-out', fill: 'forwards' })
+            .onfinish = () => flash.remove();
+    }, CLAW_HIT_MS);
+}
+
 // ─── UFO 이펙트 ───────────────────────────────────────────────────────────────
 function strikeUFO(cell, moleIndex) {
     const cr  = cell.getBoundingClientRect();
     const cx  = cr.left + cr.width  / 2;
-    const cy  = cr.top  + cr.height / 2;
     const ufoW = 110;
+    const UFO_BODY_H = 50; // 돔(20) + 본체(22) + 조명(6) + 여유(2)
+
+    // UFO 최종 위치: 셀 상단 기준으로 위로 올라가되 화면 상단 10px 이상 확보
+    const ufoEndTop  = Math.max(10, cr.top - 200);
+    const ufoStartTop = -120;
+
+    // 빔 높이: UFO 하단(ufoEndTop + UFO_BODY_H)에서 셀 상단(cr.top)까지 딱 맞게
+    const beamH = cr.top - ufoEndTop - UFO_BODY_H;
 
     // 어두운 우주 오버레이
     const overlay = document.createElement('div');
@@ -1289,10 +1412,6 @@ function strikeUFO(cell, moleIndex) {
     document.body.appendChild(overlay);
     overlay.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, fill: 'forwards' });
 
-    // UFO 최종 정지 위치 (두더지 위 130px)
-    const ufoEndTop  = Math.max(20, cy - 140);
-    const ufoStartTop = -130;  // 화면 위에서 시작
-
     const ufo = document.createElement('div');
     Object.assign(ufo.style, {
         position: 'fixed',
@@ -1302,7 +1421,6 @@ function strikeUFO(cell, moleIndex) {
         pointerEvents: 'none', zIndex: '82',
     });
 
-    const beamH = ufoEndTop - ufoStartTop + 120;
     ufo.innerHTML = `
         <div style="text-align:center;position:relative">
             <div style="width:46px;height:20px;
@@ -1324,19 +1442,19 @@ function strikeUFO(cell, moleIndex) {
                             position:absolute;right:15px;top:0;box-shadow:0 0 6px #ff88ff"></div>
             </div>
             <div style="width:0;height:0;
-                        border-left:32px solid transparent;
-                        border-right:32px solid transparent;
-                        border-top:${beamH}px solid rgba(120,220,255,0.13);
-                        margin:0 auto;filter:blur(7px);position:relative;z-index:-1"></div>
+                        border-left:28px solid transparent;
+                        border-right:28px solid transparent;
+                        border-top:${beamH}px solid rgba(120,220,255,0.16);
+                        margin:0 auto;filter:blur(6px);position:relative;z-index:-1"></div>
         </div>`;
     document.body.appendChild(ufo);
 
     // UFO 내려오기 → 대기 → 올라가기
     const dy = ufoEndTop - ufoStartTop;
     ufo.animate([
-        { transform: 'translateY(0)',         opacity: 0 },
-        { transform: `translateY(${dy}px)`,   opacity: 1, offset: 0.32, easing: 'ease-out' },
-        { transform: `translateY(${dy}px)`,   opacity: 1, offset: 0.65, easing: 'ease-in' },
+        { transform: 'translateY(0)',             opacity: 0 },
+        { transform: `translateY(${dy}px)`,       opacity: 1, offset: 0.32, easing: 'ease-out' },
+        { transform: `translateY(${dy}px)`,       opacity: 1, offset: 0.65, easing: 'ease-in' },
         { transform: `translateY(${dy - 160}px)`, opacity: 0 },
     ], { duration: UFO_HIT_MS + 600, fill: 'forwards' })
         .onfinish = () => ufo.remove();
@@ -1355,15 +1473,18 @@ function strikeUFO(cell, moleIndex) {
             { duration: 260, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
 
-        // 두더지 빨려올라가기
+        // 두더지 빨려올라가기 (fill:'forwards' → resolveHit 후 cancel로 초기화)
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
+        let upAnim = null;
         if (moleChar) {
-            moleChar.animate([
+            upAnim = moleChar.animate([
                 { transform: 'translateY(24px)  scale(1)',   opacity: 1 },
                 { transform: 'translateY(-15px) scale(0.7)', opacity: 0.6, offset: 0.4 },
                 { transform: 'translateY(-65px) scale(0.2)', opacity: 0 },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
         }
+        // resolveHit가 mole을 숨긴 직후 animation cancel → 다음 턴 정상 표시
+        setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} }, UFO_RESOLVE_MS - UFO_HIT_MS + 50);
 
         // 별빛 파티클 (UFO 주변)
         for (let i = 0; i < 8; i++) {
