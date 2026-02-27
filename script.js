@@ -31,8 +31,6 @@ function saveBest(score) {
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
-const BOARD_TILT_DEG   = 36;    // rotateX 기울기 (perspective 효과)
-const PERSPECTIVE_PX   = 600;   // CSS perspective 값 (boardWrapper와 일치)
 const TURN_DELAY_MIN   = 2000;
 const TURN_DELAY_RNG   = 3000;
 const SLOW_RATE        = 0.1;
@@ -334,22 +332,12 @@ const getNextDelay = () => TURN_DELAY_MIN + Math.random() * TURN_DELAY_RNG;
 function scaleBoard() {
     if (!gameHeader || !boardWrapper || !gameContainer) return;
     const headerH = gameHeader.getBoundingClientRect().height;
-    const availW  = window.innerWidth - 48;  // 좌우 여백 24px씩
-    const availH  = document.body.clientHeight - headerH - GUN_AREA_H - 14; // 헤더 하단 여백
-    const tiltRad = BOARD_TILT_DEG * Math.PI / 180;
-    const d = PERSPECTIVE_PX;
+    const availW  = window.innerWidth  - 48;
+    const availH  = window.innerHeight - headerH - GUN_AREA_H - 14;
+    const scale   = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
 
-    // perspective + rotateX → bottom row가 viewer에 가까워져 실제 점유 너비·높이 모두 증가
-    // width: bottom row 실 너비 = BOARD*s*d/(d - BOARD*s*sinθ) ≤ availW → 역산
-    const scaleByW = (availW * d) / (BOARD_SIZE * (d + availW * Math.sin(tiltRad)));
-    // height: screen 점유 높이 = BOARD*s*cosθ*d/(d - BOARD*s*sinθ) = availH → 역산
-    const scaleByH = (availH * d) / (BOARD_SIZE * (d * Math.cos(tiltRad) + availH * Math.sin(tiltRad)));
-    const scale    = Math.min(scaleByW, scaleByH);
-
-    gameContainer.style.transform = `scale(${scale}) rotateX(${BOARD_TILT_DEG}deg)`;
-    // 실제 screen 점유 높이 (perspective 보정)
-    const screenH = (BOARD_SIZE * scale * Math.cos(tiltRad)) * d / (d - BOARD_SIZE * scale * Math.sin(tiltRad));
-    boardWrapper.style.height = `${screenH}px`;
+    gameContainer.style.transform = `scale(${scale})`;
+    boardWrapper.style.height = `${BOARD_SIZE * scale}px`;
 }
 
 window.addEventListener('resize', scaleBoard);
@@ -742,6 +730,27 @@ function endGame(reason, elapsedMs = null) {
 document.addEventListener('visibilitychange', () => {
     if (document.hidden && gameActive) endGame('게임 화면을 벗어났습니다.');
 });
+
+// ─── 게임 중단 ────────────────────────────────────────────────────────────────
+function quitGame() {
+    gameActive = false;
+    isSlowMo   = false;
+    isPaused   = false;
+    pauseData  = null;
+    clearTimeout(turnTimer);
+    clearTimeout(nextTurnTimer);
+    slowMoTimers.forEach(clearTimeout);
+    slowMoTimers = [];
+    document.getAnimations().forEach(a => { a.playbackRate = 1; });
+    SFX.stopBGM();
+    stopElapsedDisplay();
+    pauseOverlay.classList.add('hidden');
+    pauseBtn.classList.add('hidden');
+    document.querySelector('.gun-wrap')?.classList.add('hidden');
+    cachedMoles.forEach(m => m.classList.remove('show'));
+    if (score > 0) saveBest(score);
+    navigateTo('intro');
+}
 
 // ─── 일시정지 ─────────────────────────────────────────────────────────────────
 function togglePause() {
