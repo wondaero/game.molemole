@@ -59,6 +59,15 @@ script.js    ← 게임 로직
 
 ## 구현 상세
 
+### 두더지 캐릭터 디자인
+- **색상**: 몸통·귀 `#8B6448` (갈색-회색 중간톤), 귀 안쪽 `#D4956A`
+- **구조**: `.mole-body` 타원(84×68px, border-radius:50%) + `.mole-head` 투명 컨테이너
+  - `.mole-eyes`: flex + `::before/::after`로 눈 2개 (6×10px 타원)
+  - `.mole-nose`: absolute, top:30px
+  - `.mole-mouse`: absolute, top:35px, `::before/::after`로 이빨
+- **스파이 안경**: `.spy-glasses` (기본 `display:none`) → `.mole.spy` 또는 `.intro-mole-hole.spy`일 때 `display:flex`
+- `.mole-char` 기본 transform: `translateY(50px)` (게임 셀 기준)
+
 ### 팝업 애니메이션
 - 구조: `.cell > .mole-hole(overflow:hidden) > [.gift, .mole > .mole-char]`
 - 기본: `transform: translateY(100%)` → `.show` 추가 시 `translateY(0)`, 0.18s ease-out
@@ -74,7 +83,7 @@ script.js    ← 게임 로직
 | 무기 ID | 이름 | 이펙트 | 비고 |
 |---|---|---|---|
 | `hammer` | 뿅망치 | ✅ `swingHammer()` | body 레이어, transform-origin 손잡이 꼭대기 |
-| `gun` | 물총 | ✅ `shootWater()` | 슬로우모션, 물줄기, splash |
+| `gun` | 물총 | ✅ `shootWater()` | 슬로우모션, 물줄기, splash. 조준점: `GUN_AIM {x, y}` 상수 (0.0~1.0) |
 | `lightning` | 번개 | ✅ `strikeLightning()` | |
 | `bomb` | 폭탄 | ✅ `throwProjectile()` | bomb/balloon 공용 |
 | `balloon` | 물풍선 | ✅ `throwProjectile()` | |
@@ -83,6 +92,8 @@ script.js    ← 게임 로직
 | `target` | 타겟 | ✅ `strikeTarget()` | SVG 십자선 이동 |
 | `claw` | 인형뽑기 | ✅ `strikeClaw()` | 단일 keyframe 타임라인, 갈고리 열림→닫힘 |
 | `net` | 그물 | ❌ default(hammer) fallback | 이펙트 미구현 |
+
+**물총 조준점**: `const GUN_AIM = { x: 0.5, y: 0.6 }` (script.js 상수 섹션) — x/y 각 0.0~1.0, 구멍 내 상대 위치
 
 **fill:'forwards' 주의**: UFO/갈고리처럼 mole-char를 위로 빨아들이는 이펙트는
 `upAnim` 참조 저장 → `RESOLVE_MS + 50ms` 후 `upAnim.cancel()` 호출 필수 (미구현 시 다음 턴 두더지 실종)
@@ -101,10 +112,12 @@ script.js    ← 게임 로직
 
 ### 인트로 화면 레이아웃
 - `.intro-content`: 타이틀(`intro-title`) + 버튼 4개(`intro-nav`) — 상단 72px 패딩으로 위쪽 고정
-- `.intro-moles`: 하단에 두더지 구멍 4개 행. `margin-top: auto`로 바닥에 붙임, `margin-bottom: -36px`으로 일부 화면 밖
-  - 각 `.intro-mole-hole` 90px 원형, `margin-left: -20px` 겹침, z-index 4→1 (왼쪽이 위)
+- `.intro-moles`: 하단에 두더지 구멍 4개 행. `margin-top: auto`로 바닥에 붙임
+  - 각 `.intro-mole-hole` 90px, `margin-left: -24px` 겹침, z-index 4→1 (왼쪽이 위), `overflow: hidden` 없음
   - 3번째(`:nth-child(3)`)에 `.spy` 클래스 → 안경 표시
   - 내부 `.mole-char`: `scale(0.75) translateY(18px)`, `transform-origin: top left`
+  - **순차 점프 애니메이션**: `@keyframes introMolePop` — 쉬는 위치(`18px`) → 점프(`-18px`) → 착지 반동(`24px`) → 복귀
+    - 사이클 3.2s, 딜레이 0 / 0.8 / 1.6 / 2.4s (순차), `infinite both`
 
 ### 보드 스케일
 - `BOARD_SIZE = 550px` (cell 120×4 + gap 10×3 + pad 20×2)

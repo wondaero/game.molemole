@@ -68,6 +68,10 @@ const CLAW_SLOWSTART_MS  = 130;
 const CLAW_HIT_MS        = 480;
 const CLAW_RESOLVE_MS    = CLAW_HIT_MS + 850;
 
+// ── 물총 조준점 (구멍 내 상대 위치, 0.0~1.0) ─────────────────────────────────
+// x: 0.5 = 수평 중앙 / y: 0.5 = 수직 중앙, 0.6 = 중앙보다 20% 아래
+const GUN_AIM = { x: 0.5, y: 0.6 };
+
 // ─── 게임 상태 ────────────────────────────────────────────────────────────────
 let score             = 0;
 let reactionTimes     = [];
@@ -378,10 +382,9 @@ function initGrid() {
                 <div class="glass-bridge"></div>
                 <div class="glass right"></div>
               </div>
-              <div class="mole-eye left"><div class="pupil"></div></div>
-              <div class="mole-eye right"><div class="pupil"></div></div>
-              <div class="mole-snout"><div class="mole-nose"></div></div>
-              <div class="mole-teeth"><div class="mole-tooth"></div><div class="mole-tooth"></div></div>
+              <div class="mole-eyes"></div>
+              <div class="mole-nose"></div>
+              <div class="mole-mouse"></div>
             </div>
           </div>`;
 
@@ -452,7 +455,6 @@ function showMoles() {
     positions.forEach((pos) => {
         const mole = cachedMoles[pos];
         mole.classList.add('show');
-        cachedGifts[pos].classList.add('show'); // 두더지 뒤에서 같이 올라옴
         if (spySet.has(pos)) {
             mole.classList.add('spy');
             mole.dataset.type = 'spy';
@@ -636,6 +638,7 @@ function resolveHit(index, isSpy, reactionTime, cell) {
 function showGift(index, item, onCollect) {
     const giftEl = cachedGifts[index];
     giftEl.textContent         = '🎁';
+    giftEl.classList.add('show');
     giftEl.style.pointerEvents = 'auto';
 
     function onClick(e) {
@@ -693,6 +696,7 @@ function startGame() {
 
     initGrid();
     SFX.playBGM();
+
 
     pauseBtn.classList.remove('hidden');
     pauseBtn.textContent = '⏸ 일시정지';
@@ -872,9 +876,9 @@ function swingHammer(cell, moleIndex) {
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
             moleChar.animate([
-                { transform: 'translateY(24px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
-                { transform: 'translateY(38px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
-                { transform: 'translateY(24px) scaleY(1)',    offset: 1 },
+                { transform: 'translateY(50px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
+                { transform: 'translateY(64px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
+                { transform: 'translateY(50px) scaleY(1)',    offset: 1 },
             ], { duration: 250 });
         }
     }, 150);
@@ -883,10 +887,29 @@ function swingHammer(cell, moleIndex) {
 }
 
 // ─── 번개 이펙트 ──────────────────────────────────────────────────────────────
-function strikeLightning(cell, moleIndex) {
+function strikeLightning(cell) {
     const cr = cell.getBoundingClientRect();
     const tx = cr.left + cr.width  / 2;
     const ty = cr.top  + cr.height / 2;
+
+    // ── 어두운 오버레이: 어두워짐 → 히트 플래시 → 다시 어두워짐 → 사라짐 ──
+    const overlay = document.createElement('div');
+    Object.assign(overlay.style, {
+        position: 'fixed', inset: '0',
+        background: 'rgba(0,0,20,0.92)',
+        pointerEvents: 'none', zIndex: '79',
+    });
+    document.body.appendChild(overlay);
+    const hitRatio = LIGHTNING_HIT_MS / LIGHTNING_RESOLVE_MS;
+    overlay.animate([
+        { opacity: 0,   offset: 0 },
+        { opacity: 1,   offset: 0.13 },           // 빠르게 어두워짐
+        { opacity: 1,   offset: hitRatio },        // 히트 직전까지 어두운 상태 유지
+        { opacity: 0,   offset: hitRatio + 0.06 }, // 번개 히트 → 순간 밝아짐
+        { opacity: 0.8, offset: hitRatio + 0.18 }, // 다시 어두워짐
+        { opacity: 0,   offset: 1 },               // 서서히 사라짐
+    ], { duration: LIGHTNING_RESOLVE_MS, fill: 'forwards' })
+        .onfinish = () => overlay.remove();
 
     // 지그재그 SVG 경로 생성 (매번 랜덤)
     function makeBoltPath(spread, segs = 7) {
@@ -939,16 +962,6 @@ function strikeLightning(cell, moleIndex) {
         flash.animate([{ opacity: 1 }, { opacity: 0 }],
             { duration: 180, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
-
-        // 두더지 찌그러짐
-        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        if (moleChar) {
-            moleChar.animate([
-                { transform: 'translateY(24px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
-                { transform: 'translateY(38px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
-                { transform: 'translateY(24px) scaleY(1)',    offset: 1 },
-            ], { duration: 250 });
-        }
 
         // 전기 파티클 (노란/주황 불꽃)
         for (let i = 0; i < 10; i++) {
@@ -1042,9 +1055,9 @@ function throwProjectile(cell, moleIndex, type) {
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
             moleChar.animate([
-                { transform: 'translateY(24px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
-                { transform: 'translateY(38px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
-                { transform: 'translateY(24px) scaleY(1)',    offset: 1 },
+                { transform: 'translateY(50px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
+                { transform: 'translateY(64px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
+                { transform: 'translateY(50px) scaleY(1)',    offset: 1 },
             ], { duration: 250 });
         }
 
@@ -1097,8 +1110,8 @@ function shootWater(targetEl) {
     isShooting = true;
 
     const wr = targetEl.getBoundingClientRect();
-    const tx = wr.left + wr.width  / 2;
-    const ty = wr.top  + wr.height / 2;
+    const tx = wr.left + wr.width  * GUN_AIM.x;
+    const ty = wr.top  + wr.height * GUN_AIM.y;
 
     // transform-origin이 총구 → 회전 전에 읽어도 항상 정확한 위치
     const mr = muzzlePt.getBoundingClientRect();
@@ -1167,7 +1180,7 @@ function waterSplash(cx, cy) {
 }
 
 // ─── 핀조명 이펙트 ────────────────────────────────────────────────────────────
-function strikeSpotlight(cell, moleIndex) {
+function strikeSpotlight(cell) {
     const cr = cell.getBoundingClientRect();
     const mx = cr.left + cr.width  / 2;
     const my = cr.top  + cr.height / 2;
@@ -1183,7 +1196,7 @@ function strikeSpotlight(cell, moleIndex) {
     const nx = -dy / dist, ny = dx / dist;
 
     // 빔 사다리꼴 꼭짓점 (램프 출구 startR → 타겟 endR)
-    const startR = 11, endR = 68;
+    const startR = 8, endR = cr.width * 0.65;
     const pts = [
         [lampX + nx * startR, lampY + ny * startR],
         [lampX - nx * startR, lampY - ny * startR],
@@ -1211,14 +1224,14 @@ function strikeSpotlight(cell, moleIndex) {
     });
     document.body.appendChild(svg);
 
-    // 그라디언트: 램프→타겟으로 점점 밝아짐
+    // 그라디언트: 램프 쪽 진하게 → 타겟 쪽 투명하게
     const defs = document.createElementNS(svgNS, 'defs');
     const grad = document.createElementNS(svgNS, 'linearGradient');
     grad.setAttribute('id', 'spot-beam-grad');
     grad.setAttribute('gradientUnits', 'userSpaceOnUse');
     grad.setAttribute('x1', lampX); grad.setAttribute('y1', lampY);
     grad.setAttribute('x2', mx);   grad.setAttribute('y2', my);
-    [['0%', 'rgba(255,255,160,0.03)'], ['100%', 'rgba(255,255,160,0.32)']].forEach(([off, col]) => {
+    [['0%', 'rgba(255,255,160,0.45)'], ['100%', 'rgba(255,255,160,0.0)']].forEach(([off, col]) => {
         const s = document.createElementNS(svgNS, 'stop');
         s.setAttribute('offset', off); s.setAttribute('stop-color', col); grad.appendChild(s);
     });
@@ -1242,7 +1255,8 @@ function strikeSpotlight(cell, moleIndex) {
 
     // ── 램프 픽스처 ───────────────────────────────────────────────────────────
     // CW 회전량: 램프 기본 방향(아래) → 타겟 방향
-    const rotateDeg = Math.atan2(dx, dy) * 180 / Math.PI;
+    // CSS rotate(θ)에서 발광부(0,40)의 x' = -40·sin(θ) 이므로 dx 부호 반전
+    const rotateDeg = Math.atan2(-dx, dy) * 180 / Math.PI;
     const lampSize = 52;
     const lampEl = document.createElement('div');
     Object.assign(lampEl.style, {
@@ -1275,15 +1289,6 @@ function strikeSpotlight(cell, moleIndex) {
         flash.animate([{ opacity: 1 }, { opacity: 0 }],
             { duration: 220, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
-
-        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        if (moleChar) {
-            moleChar.animate([
-                { transform: 'translateY(24px) scaleY(1)',    offset: 0   },
-                { transform: 'translateY(38px) scaleY(0.62)', offset: 0.3 },
-                { transform: 'translateY(24px) scaleY(1)',    offset: 1   },
-            ], { duration: 250 });
-        }
 
         [overlay, svg, lampEl].forEach(el => {
             el.animate([{ opacity: 1 }, { opacity: 0 }],
@@ -1366,13 +1371,13 @@ function strikeClaw(cell, moleIndex) {
         let upAnim = null;
         if (moleChar) {
             upAnim = moleChar.animate([
-                { transform: 'translateY(24px) scale(1)',    opacity: 1               },
+                { transform: 'translateY(50px) scale(1)',    opacity: 1               },
                 { transform: 'translateY(-20px) scale(0.8)', opacity: 0.7, offset: 0.3 },
                 { transform: 'translateY(-80px) scale(0.3)', opacity: 0               },
             ], { duration: 500, easing: 'ease-in', fill: 'forwards' });
         }
         setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} },
-            CLAW_RESOLVE_MS - CLAW_HIT_MS + 50);
+            CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
 
         // 잡는 순간 플래시
         const flash = document.createElement('div');
@@ -1478,13 +1483,13 @@ function strikeUFO(cell, moleIndex) {
         let upAnim = null;
         if (moleChar) {
             upAnim = moleChar.animate([
-                { transform: 'translateY(24px)  scale(1)',   opacity: 1 },
+                { transform: 'translateY(50px)  scale(1)',   opacity: 1 },
                 { transform: 'translateY(-15px) scale(0.7)', opacity: 0.6, offset: 0.4 },
                 { transform: 'translateY(-65px) scale(0.2)', opacity: 0 },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
         }
         // resolveHit가 mole을 숨긴 직후 animation cancel → 다음 턴 정상 표시
-        setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} }, UFO_RESOLVE_MS - UFO_HIT_MS + 50);
+        setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} }, UFO_RESOLVE_MS - UFO_HIT_MS + 250);
 
         // 별빛 파티클 (UFO 주변)
         for (let i = 0; i < 8; i++) {
@@ -1581,9 +1586,9 @@ function strikeTarget(cell, moleIndex) {
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
             moleChar.animate([
-                { transform: 'translateY(24px) scaleY(1)',    offset: 0   },
-                { transform: 'translateY(38px) scaleY(0.62)', offset: 0.3 },
-                { transform: 'translateY(24px) scaleY(1)',    offset: 1   },
+                { transform: 'translateY(50px) scaleY(1)',    offset: 0   },
+                { transform: 'translateY(64px) scaleY(0.62)', offset: 0.3 },
+                { transform: 'translateY(50px) scaleY(1)',    offset: 1   },
             ], { duration: 250 });
         }
 

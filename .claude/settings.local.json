@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls /Users/ro/Desktop/project1/mine/game.molemole/*.html /Users/ro/Desktop/project1/mine/game.molemole/*.css /Users/ro/Desktop/project1/mine/game.molemole/*.js /Users/ro/Desktop/project1/mine/game.molemole/*.txt /Users/ro/Desktop/project1/mine/game.molemole/*.md)"
+    ]
+  }
+}
