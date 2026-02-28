@@ -87,13 +87,15 @@ script.js    ← 게임 로직
 | `lightning` | 번개 | ✅ `strikeLightning()` | |
 | `bomb` | 폭탄 | ✅ `throwProjectile()` | bomb/balloon 공용 |
 | `balloon` | 물풍선 | ✅ `throwProjectile()` | |
-| `spotlight` | 핀조명 | ✅ `strikeSpotlight()` | SVG 빔+램프, 램프 회전 atan2(dx,dy) |
+| `spotlight` | 핀조명 | ✅ `strikeSpotlight()` | SVG 빔+램프, 램프 회전 atan2(dx,dy). fade-out: 빔·오버레이 먼저(380ms), 램프 220ms 후(280ms) — 순서 어긋나면 반투명 램프 뒤로 빔이 비치는 현상 발생 |
 | `ufo` | UFO빔 | ✅ `strikeUFO()` | 빔 cr.top에서 끊김, upAnim.cancel() 버그 수정 |
 | `target` | 타겟 | ✅ `strikeTarget()` | SVG 십자선 이동 |
 | `claw` | 인형뽑기 | ✅ `strikeClaw()` | 단일 keyframe 타임라인, 갈고리 열림→닫힘 |
 | `net` | 그물 | ❌ default(hammer) fallback | 이펙트 미구현 |
 
 **물총 조준점**: `const GUN_AIM = { x: 0.5, y: 0.6 }` (script.js 상수 섹션) — x/y 각 0.0~1.0, 구멍 내 상대 위치
+
+**물총 UI 가시성**: `.gun-wrap`은 CSS `opacity: 0` 기본값으로 숨김 (`display:none` 사용 불가 — `getBoundingClientRect()`가 0 반환함). `shootWater()` 호출 시 `gun.parentElement.style.opacity = '1'`로 등장, 발사 완료 후 `'0'`으로 복귀. HTML에 `.hidden` 클래스 없어야 함.
 
 **fill:'forwards' 주의**: UFO/갈고리처럼 mole-char를 위로 빨아들이는 이펙트는
 `upAnim` 참조 저장 → `RESOLVE_MS + 50ms` 후 `upAnim.cancel()` 호출 필수 (미구현 시 다음 턴 두더지 실종)
@@ -132,7 +134,7 @@ script.js    ← 게임 로직
 - 단축키: Esc / P
 
 ### 콜렉션 시스템
-- `COLLECTION_DATA.normal` (28개): 무기 10 / 테마 3 / 스킨 3 / 모자 4 / 안경 2 / 의상 2 / 장신구 2 / 효과 2
+- `COLLECTION_DATA.normal` (26개): 무기 10 / 테마 3 / 스킨 3 / 모자 4 / 안경 2 / 장신구 2 / 효과 2
 - `COLLECTION_DATA.hidden` (5개): 특수 조건 해금 (조건 미구현, `checkHiddenConditions()` stub)
 - localStorage: `molemole_collection` (해금 ID 배열), `molemole_equipped` (카테고리별 장착 ID)
 - `unlocked: true`는 현재 테스트용 — 릴리즈 전 false로 변경 필요

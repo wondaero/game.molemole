@@ -28,6 +28,17 @@ function saveBest(score) {
 }
 
 
+// ─── 누적 통계 (히든 미션 조건 추적) ─────────────────────────────────────────
+const STATS_KEY = 'molemole_stats';
+
+function loadStats() {
+    try { return JSON.parse(localStorage.getItem(STATS_KEY)) || {}; }
+    catch { return {}; }
+}
+function saveStats(stats) {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+}
+
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
@@ -75,6 +86,7 @@ const GUN_AIM = { x: 0.5, y: 0.6 };
 // ─── 게임 상태 ────────────────────────────────────────────────────────────────
 let score             = 0;
 let reactionTimes     = [];
+let lastHitIndices    = []; // 일관성2: 최근 클릭한 셀 인덱스 (최대 3개)
 let moleAppearTime    = 0;
 let gameActive        = false;
 let turnTimer         = null;
@@ -182,8 +194,6 @@ const COLLECTION_DATA = {
         { id: 'h_crown',  cat: '모자',   emoji: '👑', name: '왕관',        unlocked: true},
         { id: 'g_spy',    cat: '안경',   emoji: '🕶️', name: '클래식 선글', unlocked: true  },
         { id: 'g_round',  cat: '안경',   emoji: '👓', name: '동글 안경',   unlocked: true},
-        { id: 'c_scarf',  cat: '의상',   emoji: '🧣', name: '목도리',      unlocked: true},
-        { id: 'c_coat',   cat: '의상',   emoji: '🧥', name: '코트',        unlocked: true},
         { id: 'a_tie',    cat: '장신구', emoji: '👔', name: '넥타이',      unlocked: true},
         { id: 'a_star',   cat: '장신구', emoji: '⭐', name: '별 브로치',   unlocked: true},
         { id: 'e_water',  cat: '효과',   emoji: '💧', name: '물방울',      unlocked: true  },
@@ -327,13 +337,32 @@ function unlockHidden(id, condition) {
     }
 }
 
-function checkHiddenConditions() {
-    // TODO: 각 히든 아이템 해금 조건 구현 예시:
-    // unlockHidden('hw_gold',    score >= 50);
-    // unlockHidden('hh_skull',   score >= 100);
-    // unlockHidden('hg_vip',     reactionTimes.length > 0 && Math.min(...reactionTimes) < 100);
-    // unlockHidden('ha_diamond', score >= 30);
-    // unlockHidden('he_rainbow', score >= 20);
+function checkHiddenConditions(reactionTime, _hitIndex, isSpy, _stats) {
+    if (reactionTime === undefined) return;
+
+    if (isSpy) {
+        // 스파이와의 약속: score가 10일 때 스파이 클릭 (score는 아직 increment 전)
+        // TODO: unlockHidden('spy_pact', score === 10);
+        return;
+    }
+
+    // 두더지전문가: 누적 포획 100 / 1000 / 10000
+    // TODO: unlockHidden('expert_100',   (stats?.totalCaught || 0) >= 100);
+    // TODO: unlockHidden('expert_1000',  (stats?.totalCaught || 0) >= 1000);
+    // TODO: unlockHidden('expert_10000', (stats?.totalCaught || 0) >= 10000);
+
+    // 럭키가이: 반응속도 정확히 777ms
+    // TODO: unlockHidden('lucky_777', reactionTime === 777);
+
+    // 일관성1: 연속 3턴 반응속도 완전히 동일
+    if (reactionTimes.length >= 3) {
+        // TODO: unlockHidden('consistent_rt', reactionTimes.at(-3) === reactionTimes.at(-2) && reactionTimes.at(-2) === reactionTimes.at(-1));
+    }
+
+    // 일관성2: 연속 3턴 같은 셀 클릭
+    if (lastHitIndices.length >= 3) {
+        // TODO: unlockHidden('consistent_pos', lastHitIndices[0] === lastHitIndices[1] && lastHitIndices[1] === lastHitIndices[2]);
+    }
 }
 
 // ─── 유틸 ────────────────────────────────────────────────────────────────────
@@ -377,11 +406,7 @@ function initGrid() {
             <div class="mole-ear right"></div>
             <div class="mole-body"></div>
             <div class="mole-head">
-              <div class="spy-glasses">
-                <div class="glass left"></div>
-                <div class="glass-bridge"></div>
-                <div class="glass right"></div>
-              </div>
+              <div class="spy-glasses"></div>
               <div class="mole-eyes"></div>
               <div class="mole-nose"></div>
               <div class="mole-mouse"></div>
@@ -590,6 +615,7 @@ function resolveHit(index, isSpy, reactionTime, cell) {
 
     if (isSpy) {
         cachedGifts[index].classList.remove('show');
+        checkHiddenConditions(reactionTime, index, true);
         SFX.gameOver();
         endGame('스파이 두더지를 클릭했습니다!', reactionTime);
         return;
@@ -598,6 +624,16 @@ function resolveHit(index, isSpy, reactionTime, cell) {
     score++;
     elScore.textContent = score;
     reactionTimes.push(reactionTime);
+
+    // ── 히든 미션 통계 기록 ──
+    const stats = loadStats();
+    stats.totalCaught = (stats.totalCaught || 0) + 1;
+    saveStats(stats);
+
+    lastHitIndices.push(index);
+    if (lastHitIndices.length > 3) lastHitIndices.shift();
+
+    checkHiddenConditions(reactionTime, index, false, stats);
     if (elPrevRtWrap && elPrevRtVal) {
         elPrevRtVal.textContent = reactionTime;
         elPrevRtWrap.classList.remove('hidden');
@@ -675,6 +711,7 @@ function startGame() {
 
     score                = 0;
     reactionTimes        = [];
+    lastHitIndices       = [];
     gameActive           = true;
     isSlowMo             = false;
     isPaused             = false;
@@ -701,8 +738,6 @@ function startGame() {
     pauseBtn.classList.remove('hidden');
     pauseBtn.textContent = '⏸ 일시정지';
 
-    // 무기 UI: 물총은 장착 시에만 표시
-    document.querySelector('.gun-wrap')?.classList.toggle('hidden', equippedWeapon !== 'gun');
 
     const delay = getNextDelay();
     nextTurnTimerEndTime = Date.now() + delay;
@@ -771,7 +806,6 @@ function quitGame() {
     stopElapsedDisplay();
     pauseOverlay.classList.add('hidden');
     pauseBtn.classList.add('hidden');
-    document.querySelector('.gun-wrap')?.classList.add('hidden');
     cachedMoles.forEach(m => m.classList.remove('show'));
     if (score > 0) saveBest(score);
     navigateTo('intro');
@@ -1109,6 +1143,10 @@ function shootWater(targetEl) {
     if (!gun || !muzzlePt || isShooting) return;
     isShooting = true;
 
+    // 발사 시에만 총 등장
+    const gunWrap = gun.parentElement;
+    gunWrap.style.opacity = '1';
+
     const wr = targetEl.getBoundingClientRect();
     const tx = wr.left + wr.width  * GUN_AIM.x;
     const ty = wr.top  + wr.height * GUN_AIM.y;
@@ -1148,7 +1186,7 @@ function shootWater(targetEl) {
         stream.style.transition = 'opacity 0.12s';
         stream.style.opacity    = '0';
         setTimeout(() => stream.remove(), 150);
-        setTimeout(() => { gun.style.transform = ''; isShooting = false; }, 400);
+        setTimeout(() => { gun.style.transform = ''; gunWrap.style.opacity = '0'; isShooting = false; }, 400);
     }, 145);
 }
 
@@ -1208,7 +1246,7 @@ function strikeSpotlight(cell) {
     const overlay = document.createElement('div');
     Object.assign(overlay.style, {
         position: 'fixed', inset: '0',
-        background: 'rgba(0,0,0,0.88)',
+        background: 'rgba(0,0,0,0.96)',
         pointerEvents: 'none', zIndex: '80', opacity: '0',
     });
     document.body.appendChild(overlay);
@@ -1249,6 +1287,7 @@ function strikeSpotlight(cell) {
     ell.setAttribute('cx', mx); ell.setAttribute('cy', my + 6);
     ell.setAttribute('rx', endR * 0.95); ell.setAttribute('ry', endR * 0.5);
     ell.setAttribute('fill', 'rgba(255,255,200,0.22)');
+    ell.setAttribute('opacity', '0'); // TODO: 테스트용 — 원 숨김
     svg.appendChild(ell);
 
     svg.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, delay: 40, fill: 'forwards' });
@@ -1278,23 +1317,17 @@ function strikeSpotlight(cell) {
     document.body.appendChild(lampEl);
 
     // ── 히트 ─────────────────────────────────────────────────────────────────
+    // 빔·오버레이 먼저 fade-out → 램프는 그 이후 fade-out
+    // (동시에 사라지면 반투명 램프 뒤로 빔이 비치는 현상 발생)
     setTimeout(() => {
-        const flash = document.createElement('div');
-        Object.assign(flash.style, {
-            position: 'fixed', inset: '0',
-            background: 'rgba(255,255,180,0.52)',
-            pointerEvents: 'none', zIndex: '90',
-        });
-        document.body.appendChild(flash);
-        flash.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 220, easing: 'ease-out', fill: 'forwards' })
-            .onfinish = () => flash.remove();
-
-        [overlay, svg, lampEl].forEach(el => {
+        [overlay, svg].forEach(el => {
             el.animate([{ opacity: 1 }, { opacity: 0 }],
-                { duration: 320, easing: 'ease-out', fill: 'forwards' })
+                { duration: 380, easing: 'ease-in', fill: 'forwards' })
                 .onfinish = () => el.remove();
         });
+        lampEl.animate([{ opacity: 1 }, { opacity: 0 }],
+            { duration: 280, delay: 220, easing: 'ease-in', fill: 'forwards' })
+            .onfinish = () => lampEl.remove();
     }, SPOT_HIT_MS);
 }
 
