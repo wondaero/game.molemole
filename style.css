@@ -179,6 +179,7 @@ body {
     border-radius: 50%;
     top: 4px;
     z-index: 3;
+    display: none;
 }
 .mole-ear.left  { left: 28px; }
 .mole-ear.right { right: 28px; }
@@ -238,25 +239,36 @@ body {
     background: #2C1A10;
     
 }
+.mole-snout {
+    display: block;
+    background: rgb(219, 187, 187);
+    margin: 6px auto 0;
+    width: 30px;
+    height: 18px;
+    border-radius: 50% 50% 10px 10px;
+
+}
 .mole-nose {
     position: relative;
+    top: -6px;
     width: 12px;
     height: 12px;
-    background: #bf6060;
+    background: #531818;
     border-radius: 50% 50% 4px 4px;
     margin: 0 auto;
     z-index: 1;
 }
 .mole-mouse {
     position: relative;
-    width: 16px;
+    top: -10px;
+    width: 12px;
     height: 8px;
     border-radius: 0 0 50% 50%;
-    margin: -6px auto 0;
+    margin: 0 auto ;
     border-bottom: 1px solid #000;
     z-index: 1;
 }
-.mole-mouse:before,
+/* .mole-mouse:before,
 .mole-mouse:after{
     content: '';
     display: block;
@@ -274,7 +286,7 @@ body {
 .mole-mouse:after{
     left: 50%;
     transform: translateX(1px);
-}
+} */
 
 /* 모자 (기본 숨김 — 장착 시 .mole-hat-beanie 등 클래스로 표시) */
 .mole-hat {

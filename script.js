@@ -416,8 +416,10 @@ function initGrid() {
               <div class="mole-hat"></div>
               <div class="spy-glasses"></div>
               <div class="mole-eyes"></div>
-              <div class="mole-nose"></div>
-              <div class="mole-mouse"></div>
+              <div class="mole-snout">
+                <div class="mole-nose"></div>
+                <div class="mole-mouse"></div>
+              </div>
             </div>
           </div>`;
 
