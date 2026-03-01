@@ -170,31 +170,6 @@ body {
     transform: translateY(50px);
 }
 
-/* 귀: 타원 몸통 위에 얹힘 */
-.mole-ear {
-    position: absolute;
-    width: 16px;
-    height: 18px;
-    background: #8B6448;
-    border-radius: 50%;
-    top: 4px;
-    z-index: 3;
-    display: none;
-}
-.mole-ear.left  { left: 28px; }
-.mole-ear.right { right: 28px; }
-.mole-ear::after {
-    content: '';
-    position: absolute;
-    width: 9px;
-    height: 12px;
-    background: #D4956A;
-    border-radius: 50%;
-    top: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
 /* 머리: 투명 컨테이너 (얼굴 요소 위치 기준, 배경은 mole-body 타원이 담당) */
 .mole-head {
     position: absolute;
@@ -257,6 +232,21 @@ body {
     border-radius: 50% 50% 4px 4px;
     margin: 0 auto;
     z-index: 1;
+}
+.mole-nose:after,
+.mole-nose:before {
+    content: '';
+    width: 30px;
+    height: 1px;
+    background: linear-gradient(to right, #000, transparent, transparent, #000);
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(15deg);
+}
+.mole-nose:after {
+    transform: translate(-50%, -50%) rotate(-15deg);
 }
 .mole-mouse {
     position: relative;

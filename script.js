@@ -42,8 +42,8 @@ function saveStats(stats) {
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
-const TURN_DELAY_MIN   = 2000;
-const TURN_DELAY_RNG   = 3000;
+const TURN_DELAY_MIN   = 800;
+const TURN_DELAY_RNG   = 1200;
 const SLOW_RATE        = 0.1;
 const SLOW_START_MS    = 117;   // 정상속도 기준 히트 1/3 지점
 const REMAINING_HIT_MS = 23;    // 1/3 → 40% 히트 잔여 (정상속도 ms)
