@@ -276,6 +276,31 @@ body {
     transform: translateX(1px);
 }
 
+/* 모자 (기본 숨김 — 장착 시 .mole-hat-beanie 등 클래스로 표시) */
+.mole-hat {
+    position: absolute;
+    display: none;
+    width: 52px;
+    height: 30px;
+    background: #c0392b;
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;  /* 골무/돔 형태 */
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+}
+/* 비니 밑단 접힌 부분 */
+.mole-hat::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: -3px;
+    right: -3px;
+    height: 8px;
+    background: #a93226;
+    border-radius: 3px;
+}
+
 /* 스파이 안경 */
 .spy-glasses {
     position: absolute;

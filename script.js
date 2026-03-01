@@ -323,7 +323,14 @@ function equipItem(item) {
 
 function applyEquipped() {
     equippedWeapon = WEAPON_ID_MAP[equipped['무기']] || 'hammer';
-    // TODO: 테마/스킨/모자 등 적용
+
+    // 모자: 모든 .mole-hat에 장착된 모자 클래스 적용
+    const hatId = equipped['모자'] || null;
+    document.querySelectorAll('.mole-hat').forEach(el => {
+        el.className = 'mole-hat' + (hatId ? ` hat-${hatId}` : '');
+    });
+
+    // TODO: 테마/스킨/안경 등 적용
 }
 
 // ─── 히든 아이템 해금 ─────────────────────────────────────────────────────────
@@ -406,6 +413,7 @@ function initGrid() {
             <div class="mole-ear right"></div>
             <div class="mole-body"></div>
             <div class="mole-head">
+              <div class="mole-hat"></div>
               <div class="spy-glasses"></div>
               <div class="mole-eyes"></div>
               <div class="mole-nose"></div>
@@ -423,7 +431,7 @@ function initGrid() {
         hole.appendChild(mole);  // 두더지가 선물 위에
 
         cell.appendChild(hole);
-        cell.addEventListener('click', () => handleClick(i));
+        cell.addEventListener('pointerdown', () => handleClick(i));
         grid.appendChild(cell);
 
         cachedCells.push(cell);
@@ -721,7 +729,6 @@ function startGame() {
     nextTurnTimerEndTime = 0;
     turnResolved         = false;
     canDropGifts         = getLockedNormalItems().length > 0;
-    applyEquipped();
 
     elScore.textContent = '0';
     if (elPrevRtWrap) elPrevRtWrap.classList.add('hidden');
@@ -732,6 +739,7 @@ function startGame() {
     currentPage = 'game';
 
     initGrid();
+    applyEquipped(); // initGrid() 이후에 호출해야 게임 셀 .mole-hat에 적용됨
     SFX.playBGM();
 
 
@@ -773,11 +781,19 @@ function endGame(reason, elapsedMs = null) {
     const isNewRecord = score > 0 && saveBest(score);
     const best        = loadBest();
 
+    // 역대 최고 반응속도 갱신
+    const stats = loadStats();
+    if (bestReaction > 0 && (!stats.bestReactionEver || bestReaction < stats.bestReactionEver)) {
+        stats.bestReactionEver = bestReaction;
+        saveStats(stats);
+    }
+
     document.getElementById('endReason').textContent    = reason;
     document.getElementById('finalScore').textContent   = score;
     document.getElementById('allTimeBest').textContent  = best ? best.score : '-';
     document.getElementById('avgReaction').textContent  = avgReaction;
-    document.getElementById('bestReaction').textContent = bestReaction;
+    document.getElementById('bestReaction').textContent = bestReaction || '-';
+    document.getElementById('allTimeBestReaction').textContent = stats.bestReactionEver || '-';
     document.getElementById('stageTimeLimit').textContent = currentTimeLimit;
     document.getElementById('elapsedTime').textContent    = actualElapsed;
     document.getElementById('newRecordMsg').classList.toggle('hidden', !isNewRecord);
