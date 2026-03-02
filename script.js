@@ -174,7 +174,6 @@ const COLLECTION_DATA = {
     normal: [
         { id: 'w_hammer', cat: '무기',   emoji: '🔨', name: '뿅망치',      unlocked: true  },
         { id: 'w_gun',    cat: '무기',   emoji: '🔫', name: '물총',        unlocked: true},
-        { id: 'w_net',       cat: '무기',   emoji: '🪤', name: '그물',        unlocked: true},
         { id: 'w_lightning', cat: '무기',   emoji: '⚡', name: '번개',        unlocked: true},
         { id: 'w_bomb',      cat: '무기',   emoji: '💣', name: '폭탄',        unlocked: true},
         { id: 'w_balloon',   cat: '무기',   emoji: '🎈', name: '물풍선',      unlocked: true},
@@ -190,8 +189,9 @@ const COLLECTION_DATA = {
         { id: 's_orange', cat: '스킨',   emoji: '🟠', name: '주황 두더지', unlocked: true},
         { id: 'h_cap',    cat: '모자',   emoji: '🧢', name: '야구모자',    unlocked: true},
         { id: 'h_tophat', cat: '모자',   emoji: '🎩', name: '실크햇',      unlocked: true},
-        { id: 'h_bow',    cat: '모자',   emoji: '🎀', name: '리본',        unlocked: true},
-        { id: 'h_crown',  cat: '모자',   emoji: '👑', name: '왕관',        unlocked: true},
+        { id: 'pin-ribbon1',  cat: '모자',   emoji: '🎀', name: '리본 삔',     unlocked: true},
+        { id: 'tie-ribbon1',  cat: '모자',   emoji: '🪢', name: '보타이',      unlocked: true},
+        { id: 'crown1',   cat: '모자',   emoji: '👑', name: '왕관',        unlocked: true},
         { id: 'g_spy',    cat: '안경',   emoji: '🕶️', name: '클래식 선글', unlocked: true  },
         { id: 'g_round',  cat: '안경',   emoji: '👓', name: '동글 안경',   unlocked: true},
         { id: 'a_tie',    cat: '장신구', emoji: '👔', name: '넥타이',      unlocked: true},
@@ -234,7 +234,8 @@ function renderCollection() {
     const filtered = cat === '전체' ? items : items.filter(i => i.cat === cat);
     gridEl.innerHTML = '';
     filtered.forEach(item => {
-        const isEquipped = equipped[item.cat] === item.id;
+        const slot = item.cat === '무기' ? '무기' : '악세사리';
+        const isEquipped = equipped[slot] === item.id;
         const div = document.createElement('div');
         div.className = 'coll-item'
             + (item.unlocked ? ' unlocked' : '')
@@ -292,7 +293,6 @@ const EQUIPPED_KEY  = 'molemole_equipped';
 const WEAPON_ID_MAP = {
     'w_hammer':    'hammer',
     'w_gun':       'gun',
-    'w_net':       'net',
     'w_lightning': 'lightning',
     'w_bomb':      'bomb',
     'w_balloon':   'balloon',
@@ -315,7 +315,8 @@ function saveEquipped() {
 
 function equipItem(item) {
     if (!item.unlocked) return;
-    equipped[item.cat] = item.id;
+    const slot = item.cat === '무기' ? '무기' : '악세사리';
+    equipped[slot] = item.id;
     saveEquipped();
     applyEquipped();
     renderCollection();
@@ -324,13 +325,12 @@ function equipItem(item) {
 function applyEquipped() {
     equippedWeapon = WEAPON_ID_MAP[equipped['무기']] || 'hammer';
 
-    // 모자: 모든 .mole-hat에 장착된 모자 클래스 적용
-    const hatId = equipped['모자'] || null;
-    document.querySelectorAll('.mole-hat').forEach(el => {
-        el.className = 'mole-hat' + (hatId ? ` hat-${hatId}` : '');
-    });
-
-    // TODO: 테마/스킨/안경 등 적용
+    // 악세사리: body에 equipped-{id} 클래스 하나만 관리
+    // CSS: body.equipped-h_cap .item { ... } 형식으로 스타일 작성
+    document.body.className = document.body.className
+        .replace(/\bequipped-\S+/g, '').trim();
+    const accId = equipped['악세사리'];
+    if (accId) document.body.classList.add(`equipped-${accId}`);
 }
 
 // ─── 히든 아이템 해금 ─────────────────────────────────────────────────────────
@@ -409,18 +409,13 @@ function initGrid() {
         mole.className = 'mole';
         mole.innerHTML = `
           <div class="mole-char">
-            <div class="mole-ear left"></div>
-            <div class="mole-ear right"></div>
-            <div class="mole-body"></div>
-            <div class="mole-head">
-              <div class="mole-hat"></div>
-              <div class="spy-glasses"></div>
-              <div class="mole-eyes"></div>
-              <div class="mole-snout">
-                <div class="mole-nose"></div>
-                <div class="mole-mouse"></div>
-              </div>
+            <div class="spy-glasses"></div>
+            <div class="mole-eyes"></div>
+            <div class="mole-snout">
+              <div class="mole-nose"></div>
+              <div class="mole-mouse"></div>
             </div>
+            <div class="mole-item"><div></div></div>
           </div>`;
 
         const gift = document.createElement('div');

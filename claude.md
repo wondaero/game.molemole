@@ -60,14 +60,11 @@ script.js    ← 게임 로직
 
 ## 구현 상세
 
-### 두더지 캐릭터 디자인
-- **색상**: 몸통·귀 `#8B6448` (갈색-회색 중간톤), 귀 안쪽 `#D4956A`
-- **구조**: `.mole-body` 타원(84×68px, border-radius:50%) + `.mole-head` 투명 컨테이너
-  - `.mole-eyes`: flex + `::before/::after`로 눈 2개 (6×10px 타원)
-  - `.mole-nose`: absolute, top:30px
-  - `.mole-mouse`: absolute, top:35px, `::before/::after`로 이빨
+### 두더지 캐릭터 구조
+- **HTML**: `.mole-char > [.spy-glasses, .mole-eyes, .mole-snout > (.mole-nose + .mole-mouse), .mole-item > div]`
+- `.mole-char` 기본 transform: `translateY(50px)` — 무기 히트 애니메이션이 이 값 기준으로 작동, 수정 금지
 - **스파이 안경**: `.spy-glasses` (기본 `display:none`) → `.mole.spy` 또는 `.intro-mole-hole.spy`일 때 `display:flex`
-- `.mole-char` 기본 transform: `translateY(50px)` (게임 셀 기준)
+- **악세사리**: `body.equipped-{id} .mole-item { display:block; ... }` 방식으로 CSS 작성
 
 ### 팝업 애니메이션
 - 구조: `.cell > .mole-hole(overflow:hidden) > [.gift, .mole > .mole-char]`
@@ -92,7 +89,7 @@ script.js    ← 게임 로직
 | `ufo` | UFO빔 | ✅ `strikeUFO()` | 빔 cr.top에서 끊김, upAnim.cancel() 버그 수정 |
 | `target` | 타겟 | ✅ `strikeTarget()` | SVG 십자선 이동 |
 | `claw` | 인형뽑기 | ✅ `strikeClaw()` | 단일 keyframe 타임라인, 갈고리 열림→닫힘 |
-| `net` | 그물 | ❌ default(hammer) fallback | 이펙트 미구현 |
+| ~~`net`~~ | ~~그물~~ | 삭제됨 | |
 
 **물총 조준점**: `const GUN_AIM = { x: 0.5, y: 0.6 }` (script.js 상수 섹션) — x/y 각 0.0~1.0, 구멍 내 상대 위치
 
@@ -114,13 +111,12 @@ script.js    ← 게임 로직
 | claw | 130 | 480 | 1330 |
 
 ### 인트로 화면 레이아웃
-- `.intro-content`: 타이틀(`intro-title`) + 버튼 4개(`intro-nav`) — 상단 72px 패딩으로 위쪽 고정
-- `.intro-moles`: 하단에 두더지 구멍 4개 행. `margin-top: auto`로 바닥에 붙임
-  - 각 `.intro-mole-hole` 90px, `margin-left: -24px` 겹침, z-index 4→1 (왼쪽이 위), `overflow: hidden` 없음
-  - 3번째(`:nth-child(3)`)에 `.spy` 클래스 → 안경 표시
-  - 내부 `.mole-char`: `scale(0.75) translateY(18px)`, `transform-origin: top left`
-  - **순차 점프 애니메이션**: `@keyframes introMolePop` — 쉬는 위치(`18px`) → 점프(`-18px`) → 착지 반동(`24px`) → 복귀
-    - 사이클 3.2s, 딜레이 0 / 0.8 / 1.6 / 2.4s (순차), `infinite both`
+- 구조: `intro-title` (상단 72px 패딩) → `.intro-spy-mole` → `.intro-nav` (버튼 4개)
+- `.intro-spy-mole`: `margin-top: auto` (타이틀 아래 공간 흡수) + `margin-bottom: 20px`
+  - 내부에 `.intro-mole-hole.spy` 1개 — 스파이 두더지 1마리 (안경 표시)
+  - `introMolePop` 애니메이션 적용 (사이클 3.2s, nth-child(1) = 딜레이 0s)
+- `.intro-nav`: `margin-bottom: 64px` (하단 여백)
+- `.intro-mole-hole` CSS는 유지 (재사용 가능), `overflow: hidden` 없음
 
 ### 보드 스케일
 - `BOARD_SIZE = 550px` (cell 120×4 + gap 10×3 + pad 20×2)
@@ -135,10 +131,25 @@ script.js    ← 게임 로직
 - 단축키: Esc / P
 
 ### 콜렉션 시스템
-- `COLLECTION_DATA.normal` (26개): 무기 10 / 테마 3 / 스킨 3 / 모자 4 / 안경 2 / 장신구 2 / 효과 2
+- `COLLECTION_DATA.normal` (25개): 무기 8 / 테마 3 / 스킨 3 / 모자 5 / 안경 2 / 장신구 2 / 효과 2
 - `COLLECTION_DATA.hidden` (5개): 특수 조건 해금 (조건 미구현, `checkHiddenConditions()` stub)
-- localStorage: `molemole_collection` (해금 ID 배열), `molemole_equipped` (카테고리별 장착 ID)
+- localStorage: `molemole_collection` (해금 ID 배열), `molemole_equipped` (`무기` + `악세사리` 1슬롯)
 - `unlocked: true`는 현재 테스트용 — 릴리즈 전 false로 변경 필요
+
+### 악세사리 시스템
+- 슬롯: `무기` 1개 + `악세사리` 1개 (총 2슬롯)
+- `equipItem()`: `cat === '무기'` → `equipped['무기']`, 나머지 → `equipped['악세사리']`
+- `applyEquipped()`: `document.body.classList`에 `equipped-{accId}` 추가 (기존 제거 후)
+- CSS 작성 방식: `body.equipped-{id} .mole-item { display:block; ... }`
+
+### 악세사리 아이템 ID 현황
+| ID | 이름 | CSS 상태 |
+|---|---|---|
+| `pin-ribbon1` | 리본 삔 | ✅ stub 작성됨 |
+| `tie-ribbon1` | 보타이 | ✅ stub 작성됨 |
+| `crown1` | 왕관 | ✅ stub 작성됨 |
+| `h_cap` | 야구모자 | ❌ 미작성 |
+| `h_tophat` | 실크햇 | ❌ 미작성 |
 
 ---
 
@@ -186,8 +197,8 @@ introScreen, collectionScreen, settingsScreen
 ## 미구현 / TODO
 
 - 사운드: `SFX` 객체 stub만 있음 (파일 미연결)
-- 그물(`net`) 이펙트 없음 — 현재 hammer fallback
-- 콜렉션 아이템 실제 cosmstic 적용 (테마/스킨/모자 등)
+- 악세사리 CSS 미작성: `h_cap`, `h_tophat` (야구모자, 실크햇)
+- 콜렉션 아이템 실제 cosmetic 적용 (테마/스킨 등)
 - 히든 콜렉션 해금 조건 (`checkHiddenConditions()` 미구현)
 - 설정 화면 미구현
 - `unlocked: true` 전체 → 릴리즈 시 개별 false로 복원
