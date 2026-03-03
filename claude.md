@@ -62,8 +62,8 @@ script.js    ← 게임 로직
 
 ### 두더지 캐릭터 구조
 - **HTML**: `.mole-char > [.spy-glasses, .mole-eyes, .mole-snout > (.mole-nose + .mole-mouse), .mole-item > div]`
-- `.mole-char` 기본 transform: `translateY(50px)` — 무기 히트 애니메이션이 이 값 기준으로 작동, 수정 금지
-- **스파이 안경**: `.spy-glasses` (기본 `display:none`) → `.mole.spy` 또는 `.intro-mole-hole.spy`일 때 `display:flex`
+- `.mole-char`: 84px 원형 (#8B6448), `position:absolute; top:50%; left:50%; transform:translate(-50%,-50%)`
+- **스파이 안경**: `.spy-glasses` (기본 `display:none`, CSS pseudo `:before/:after`로 렌즈 표현) → `.mole.spy` 또는 `.intro-mole-hole.spy`일 때 `display:flex`
 - **악세사리**: `body.equipped-{id} .mole-item { display:block; ... }` 방식으로 CSS 작성
 
 ### 팝업 애니메이션
@@ -111,12 +111,12 @@ script.js    ← 게임 로직
 | claw | 130 | 480 | 1330 |
 
 ### 인트로 화면 레이아웃
-- 구조: `intro-title` (상단 72px 패딩) → `.intro-spy-mole` → `.intro-nav` (버튼 4개)
-- `.intro-spy-mole`: `margin-top: auto` (타이틀 아래 공간 흡수) + `margin-bottom: 20px`
-  - 내부에 `.intro-mole-hole.spy` 1개 — 스파이 두더지 1마리 (안경 표시)
-  - `introMolePop` 애니메이션 적용 (사이클 3.2s, nth-child(1) = 딜레이 0s)
-- `.intro-nav`: `margin-bottom: 64px` (하단 여백)
-- `.intro-mole-hole` CSS는 유지 (재사용 가능), `overflow: hidden` 없음
+- `intro-title`: 상단 `padding-top: 72px`, flex 상단 고정
+- `.intro-footer`: `position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%)`
+  - `.intro-spy-mole`: 스파이 두더지 1마리, `margin-bottom: 20px`
+    - 내부 `.intro-mole-hole.spy` — `introMolePop` 애니메이션 (위아래 통통+납작 찌그러짐)
+  - `.intro-nav`: 버튼 4개 (240px 너비, `button + button { margin-top: 12px }`)
+- `.intro-mole-hole` CSS: 90px, `overflow: hidden` 없음
 
 ### 보드 스케일
 - `BOARD_SIZE = 550px` (cell 120×4 + gap 10×3 + pad 20×2)

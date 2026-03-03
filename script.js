@@ -923,9 +923,9 @@ function swingHammer(cell, moleIndex) {
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
             moleChar.animate([
-                { transform: 'translateY(50px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
-                { transform: 'translateY(64px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
-                { transform: 'translateY(50px) scaleY(1)',    offset: 1 },
+                { transform: 'translate(-50%, -50%) scaleY(1)',                 offset: 0,   easing: 'ease-out' },
+                { transform: 'translate(-50%, calc(-50% + 14px)) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
+                { transform: 'translate(-50%, -50%) scaleY(1)',                 offset: 1 },
             ], { duration: 250 });
         }
     }, 150);
@@ -1102,9 +1102,9 @@ function throwProjectile(cell, moleIndex, type) {
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
             moleChar.animate([
-                { transform: 'translateY(50px) scaleY(1)',    offset: 0,   easing: 'ease-out' },
-                { transform: 'translateY(64px) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
-                { transform: 'translateY(50px) scaleY(1)',    offset: 1 },
+                { transform: 'translate(-50%, -50%) scaleY(1)',                 offset: 0,   easing: 'ease-out' },
+                { transform: 'translate(-50%, calc(-50% + 14px)) scaleY(0.62)', offset: 0.3, easing: 'ease-in'  },
+                { transform: 'translate(-50%, -50%) scaleY(1)',                 offset: 1 },
             ], { duration: 250 });
         }
 
@@ -1417,9 +1417,9 @@ function strikeClaw(cell, moleIndex) {
         let upAnim = null;
         if (moleChar) {
             upAnim = moleChar.animate([
-                { transform: 'translateY(50px) scale(1)',    opacity: 1               },
-                { transform: 'translateY(-20px) scale(0.8)', opacity: 0.7, offset: 0.3 },
-                { transform: 'translateY(-80px) scale(0.3)', opacity: 0               },
+                { transform: 'translate(-50%, -50%) scale(1)',                  opacity: 1               },
+                { transform: 'translate(-50%, calc(-50% - 70px)) scale(0.8)', opacity: 0.7, offset: 0.3 },
+                { transform: 'translate(-50%, calc(-50% - 130px)) scale(0.3)', opacity: 0               },
             ], { duration: 500, easing: 'ease-in', fill: 'forwards' });
         }
         setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} },
@@ -1525,13 +1525,16 @@ function strikeUFO(cell, moleIndex) {
             .onfinish = () => flash.remove();
 
         // 두더지 빨려올라가기 (fill:'forwards' → resolveHit 후 cancel로 초기화)
+        // 이동거리: 두더지 중심 → UFO 하단까지 정확히 계산
+        const travelDist = Math.round((cr.top + cr.height / 2) - (ufoEndTop + UFO_BODY_H));
+        const midDist    = Math.round(travelDist * 0.5);
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         let upAnim = null;
         if (moleChar) {
             upAnim = moleChar.animate([
-                { transform: 'translateY(50px)  scale(1)',   opacity: 1 },
-                { transform: 'translateY(-15px) scale(0.7)', opacity: 0.6, offset: 0.4 },
-                { transform: 'translateY(-65px) scale(0.2)', opacity: 0 },
+                { transform: 'translate(-50%, -50%) scale(1)',                              opacity: 1 },
+                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.6)`,      opacity: 0.7, offset: 0.5 },
+                { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(0.15)`,  opacity: 0 },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
         }
         // resolveHit가 mole을 숨긴 직후 animation cancel → 다음 턴 정상 표시
@@ -1632,9 +1635,9 @@ function strikeTarget(cell, moleIndex) {
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
             moleChar.animate([
-                { transform: 'translateY(50px) scaleY(1)',    offset: 0   },
-                { transform: 'translateY(64px) scaleY(0.62)', offset: 0.3 },
-                { transform: 'translateY(50px) scaleY(1)',    offset: 1   },
+                { transform: 'translate(-50%, -50%) scaleY(1)',                 offset: 0   },
+                { transform: 'translate(-50%, calc(-50% + 14px)) scaleY(0.62)', offset: 0.3 },
+                { transform: 'translate(-50%, -50%) scaleY(1)',                 offset: 1   },
             ], { duration: 250 });
         }
 
