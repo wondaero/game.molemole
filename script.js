@@ -1358,22 +1358,34 @@ function strikeClaw(cell, moleIndex) {
     setTimeout(() => {
         clawEl.innerHTML = closedSVG;
 
-        // 두더지 빨려올라감: .mole에 overflow:visible 후 원본 animate
-        const molEl    = cachedMoles[moleIndex];
-        const moleChar = molEl?.querySelector('.mole-char');
-        const moleClip = molEl?.parentElement;  // .mole-clip
-        if (moleChar && moleClip) {
-            moleClip.style.overflow = 'visible';
-            const upDist  = Math.round(600 / boardScale);
-            const midDist = Math.round(upDist * 0.15);
-            const upAnim  = moleChar.animate([
-                { transform: 'translate(-50%, -50%) scale(1)',                         opacity: 1 },
-                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.8)`, opacity: 0.8, offset: 0.2 },
-                { transform: `translate(-50%, calc(-50% - ${upDist}px)) scale(0.3)`,  opacity: 0 },
-            ], { duration: 800, easing: 'ease-in', fill: 'forwards' });
+        // 두더지 잡혀 올라감: clone을 claw와 동일한 viewport 좌표계에 고정
+        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
+        if (moleChar) {
+            const charRect = moleChar.getBoundingClientRect();
+            const clone    = moleChar.cloneNode(true);
+            Object.assign(clone.style, {
+                position: 'fixed',
+                left: `${charRect.left + charRect.width  / 2}px`,
+                top:  `${charRect.top  + charRect.height / 2}px`,
+                width: '84px', height: '84px',
+                transform: `translate(-50%, -50%) scale(${boardScale})`,
+                margin: '0', zIndex: '86', pointerEvents: 'none',
+            });
+            document.body.appendChild(clone);
+            moleChar.style.opacity = '0';
+
+            // wrap 상승 시작(PAUSE_DUR 후)에 맞춰 claw와 동일 속도로 올라감
+            const upDist = Math.round(descendDist + 700); // viewport px
+            const upDur  = totalDur - CLAW_HIT_MS - PAUSE_DUR;
+            setTimeout(() => {
+                clone.animate([
+                    { transform: `translate(-50%, -50%) scale(${boardScale})`,              opacity: 1 },
+                    { transform: `translate(-50%, calc(-50% - ${upDist}px)) scale(${boardScale * 0.15})`, opacity: 0 },
+                ], { duration: upDur, easing: 'ease-in', fill: 'forwards' });
+            }, PAUSE_DUR);
 
             setTimeout(() => {
-                try { upAnim.cancel(); moleClip.style.overflow = ''; } catch(e) {}
+                try { clone.remove(); moleChar.style.opacity = ''; } catch(e) {}
             }, CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
         }
 
@@ -1476,24 +1488,33 @@ function strikeUFO(cell, moleIndex) {
             { duration: 260, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
 
-        // 두더지 빨려올라가기: .mole에 overflow:visible 후 원본 animate, UFO 위치까지 이동
-        const molEl    = cachedMoles[moleIndex];
-        const moleChar = molEl?.querySelector('.mole-char');
-        const moleClip = molEl?.parentElement;  // .mole-clip
-        if (moleChar && moleClip) {
-            moleClip.style.overflow = 'visible';
+        // 두더지 빨려올라가기: clone을 viewport 좌표계에 고정 후 UFO까지 이동
+        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
+        if (moleChar) {
             const charRect   = moleChar.getBoundingClientRect();
-            // 뷰포트 픽셀 거리 → 보드 로컬 픽셀로 변환
-            const travelDist = Math.round(((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H)) / boardScale);
+            const clone      = moleChar.cloneNode(true);
+            Object.assign(clone.style, {
+                position: 'fixed',
+                left: `${charRect.left + charRect.width  / 2}px`,
+                top:  `${charRect.top  + charRect.height / 2}px`,
+                width: '84px', height: '84px',
+                transform: `translate(-50%, -50%) scale(${boardScale})`,
+                margin: '0', zIndex: '83', pointerEvents: 'none',
+            });
+            document.body.appendChild(clone);
+            moleChar.style.opacity = '0';
+
+            // 두더지 중심 → UFO 하단까지 viewport 픽셀 이동
+            const travelDist = Math.round((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H));
             const midDist    = Math.round(travelDist * 0.5);
-            const upAnim     = moleChar.animate([
-                { transform: 'translate(-50%, -50%) scale(1)',                             opacity: 1 },
-                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.6)`,     opacity: 0.7, offset: 0.5 },
-                { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(0.15)`, opacity: 0 },
+            clone.animate([
+                { transform: `translate(-50%, -50%) scale(${boardScale})`,                                          opacity: 1   },
+                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(${boardScale * 0.6})`,               opacity: 0.7, offset: 0.5 },
+                { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(${boardScale * 0.15})`,           opacity: 0   },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
 
             setTimeout(() => {
-                try { upAnim.cancel(); moleClip.style.overflow = ''; } catch(e) {}
+                try { clone.remove(); moleChar.style.opacity = ''; } catch(e) {}
             }, UFO_RESOLVE_MS - UFO_HIT_MS + 250);
         }
 
