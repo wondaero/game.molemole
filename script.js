@@ -627,10 +627,13 @@ function resolveHit(index, isSpy, reactionTime, cell) {
             cachedGifts[index].classList.remove('show');
             startNext();
         } else {
-            // 탄 × 0.5% 확률로 미수집 아이템 중 랜덤 드롭
-            const giftChance = score * 0.005;
-            if (Math.random() < giftChance) {
-                const item = locked[Math.floor(Math.random() * locked.length)];
+            // TODO: 릴리즈 전 확률 복원 (탄 × 0.5%) + 풀 전체로 확대
+            // const giftChance = score * 0.005;
+            if (true) { // 테스트: 100% 드롭, 3종만
+                const TEST_POOL = ['pin-ribbon1', 'tie-ribbon1', 'crown1'];
+                const testItems = locked.filter(i => TEST_POOL.includes(i.id));
+                const pool = testItems.length > 0 ? testItems : locked;
+                const item = pool[Math.floor(Math.random() * pool.length)];
                 showGift(index, item, startNext);
             } else {
                 cachedGifts[index].classList.remove('show');
