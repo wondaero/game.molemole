@@ -226,7 +226,7 @@ let collState = { tab: 'normal', cat: '전체' };
 function renderCollection() {
     const { tab, cat } = collState;
     const items = COLLECTION_DATA[tab];
-    const cats  = ['전체', ...new Set(items.map(i => i.cat))];
+    const cats  = ['전체', '보유중', ...new Set(items.map(i => i.cat))];
 
     // 카테고리 필터 렌더
     const catsEl = document.getElementById('collCats');
@@ -244,7 +244,9 @@ function renderCollection() {
     // 아이템 그리드 렌더
     const gridEl = document.getElementById('collGrid');
     if (!gridEl) return;
-    const filtered = cat === '전체' ? items : items.filter(i => i.cat === cat);
+    const filtered = cat === '전체'   ? items
+                   : cat === '보유중' ? items.filter(i => i.unlocked)
+                   :                   items.filter(i => i.cat === cat);
     gridEl.innerHTML = '';
     filtered.forEach(item => {
         const slot = item.cat === '무기' ? '무기' : '악세사리';
