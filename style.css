@@ -88,8 +88,13 @@ body {
     transition: transform 0.1s;
 }
 
-/* 커튼 클리핑 - 커튼이 칸 밖으로 안 나가게 */
 .mole-hole {
+    position: absolute;
+    inset: 0;
+}
+
+/* 팝업 클리핑 - UFO/claw 시 overflow:visible로 토글하여 탈출 허용 */
+.mole-clip {
     position: absolute;
     inset: 0;
     border-radius: 50%;
