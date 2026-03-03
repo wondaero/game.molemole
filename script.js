@@ -1363,6 +1363,11 @@ function strikeClaw(cell, moleIndex) {
         if (moleChar) {
             const charRect = moleChar.getBoundingClientRect();
             const clone    = moleChar.cloneNode(true);
+            // 클론은 .mole.spy 외부에 있으므로 CSS 셀렉터 미적용 → 스파이면 직접 표시
+            if (cachedMoles[moleIndex].classList.contains('spy')) {
+                const g = clone.querySelector('.spy-glasses');
+                if (g) g.style.display = 'flex';
+            }
             Object.assign(clone.style, {
                 position: 'fixed',
                 left: `${charRect.left + charRect.width  / 2}px`,
@@ -1493,6 +1498,11 @@ function strikeUFO(cell, moleIndex) {
         if (moleChar) {
             const charRect   = moleChar.getBoundingClientRect();
             const clone      = moleChar.cloneNode(true);
+            // 클론은 .mole.spy 외부에 있으므로 CSS 셀렉터 미적용 → 스파이면 직접 표시
+            if (cachedMoles[moleIndex].classList.contains('spy')) {
+                const g = clone.querySelector('.spy-glasses');
+                if (g) g.style.display = 'flex';
+            }
             Object.assign(clone.style, {
                 position: 'fixed',
                 left: `${charRect.left + charRect.width  / 2}px`,

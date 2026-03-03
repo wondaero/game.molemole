@@ -8,6 +8,7 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -274,6 +275,21 @@ body.equipped-pin-ribbon1 .mole-item {
     transform: rotate(30deg);
 }
 body.equipped-tie-ribbon1 .mole-item {
+    display: block;
+    position: absolute;
+    width: 30px;
+    height: 18px;
+    display: block;
+    border-left: 15px solid #f00;
+    border-right: 15px solid #f00;
+    border-bottom: 9px solid transparent;
+    border-top: 9px solid transparent;
+    bottom: -2px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+body.equipped-headset .mole-item {
     display: block;
     position: absolute;
     width: 30px;
