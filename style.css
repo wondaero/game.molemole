@@ -295,10 +295,28 @@ body.equipped-headset .mole-item {
     width: 100px;
     height: 40px;
     display: block;
-    overflow: hidden;
     top: -10px;
     left: 50%;
     transform: translateX(-50%);
+}
+body.equipped-headset .mole-item:before,
+body.equipped-headset .mole-item:after {
+    content: '';
+    background: silver;
+    display: block;
+    width: 16px;
+    height: 30px;
+    position: absolute;
+    bottom: -5px;
+    border-radius: 4px;
+}
+body.equipped-headset .mole-item:before{
+    left: 0;
+    transform: translate(-50%, 50%);
+}
+body.equipped-headset .mole-item:after{
+    right: 0;
+    transform: translate(50%, 50%);
 }
 body.equipped-headset .mole-item div {
     width: 100%;

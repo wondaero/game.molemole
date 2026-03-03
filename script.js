@@ -204,6 +204,7 @@ const COLLECTION_DATA = {
         { id: 'h_tophat', cat: '모자',   emoji: '🎩', name: '실크햇',      unlocked: true},
         { id: 'pin-ribbon1',  cat: '모자',   emoji: '🎀', name: '리본 삔',     unlocked: true},
         { id: 'tie-ribbon1',  cat: '모자',   emoji: '🪢', name: '보타이',      unlocked: true},
+        { id: 'headset',  cat: '모자',   emoji: '🎧', name: '헤드셋',      unlocked: true},
         { id: 'crown1',   cat: '모자',   emoji: '👑', name: '왕관',        unlocked: true},
         { id: 'g_spy',    cat: '안경',   emoji: '🕶️', name: '클래식 선글', unlocked: true  },
         { id: 'g_round',  cat: '안경',   emoji: '👓', name: '동글 안경',   unlocked: true},
