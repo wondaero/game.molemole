@@ -495,7 +495,7 @@ function showMoles() {
         g.style.pointerEvents = '';
     });
 
-    // 등장 (두더지 + 선물 같이 올라옴)
+    // 등장: 일반 두더지 위치에 선물도 같이 올라옴 (스파이는 선물 없음)
     positions.forEach((pos) => {
         const mole = cachedMoles[pos];
         mole.classList.add('show');
@@ -505,6 +505,10 @@ function showMoles() {
         } else {
             mole.classList.add('normal');
             mole.dataset.type = 'normal';
+            if (canDropGifts) {
+                cachedGifts[pos].textContent = '🎁';
+                cachedGifts[pos].classList.add('show');
+            }
         }
     });
 
@@ -640,8 +644,7 @@ function resolveHit(index, isSpy, reactionTime, cell) {
 // ─── 선물 ─────────────────────────────────────────────────────────────────────
 function showGift(index, item, onCollect) {
     const giftEl = cachedGifts[index];
-    giftEl.textContent         = '🎁';
-    giftEl.classList.add('show');
+    // 선물은 showMoles()에서 이미 올라와 있음 — 클릭만 활성화
     giftEl.style.pointerEvents = 'auto';
 
     function onClick(e) {
