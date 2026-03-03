@@ -50,6 +50,7 @@ function debugResetCollection() {
     localStorage.removeItem(COLLECTION_KEY);
     localStorage.removeItem(EQUIPPED_KEY);
     [...COLLECTION_DATA.normal, ...COLLECTION_DATA.hidden].forEach(i => i.unlocked = false);
+    loadEquipped(); // 메모리 equipped 상태 + body CSS 클래스 초기화
     alert('콜렉션이 초기화되었습니다.');
 }
 
