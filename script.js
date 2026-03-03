@@ -893,9 +893,10 @@ function swingHammer(cell, moleIndex) {
 
 // ─── 번개 이펙트 ──────────────────────────────────────────────────────────────
 function strikeLightning(cell) {
-    const cr = cell.getBoundingClientRect();
-    const tx = cr.left + cr.width  / 2;
-    const ty = cr.top  + cr.height / 2;
+    const moleChar = cell.querySelector('.mole-char');
+    const mcr = moleChar ? moleChar.getBoundingClientRect() : cell.getBoundingClientRect();
+    const tx = mcr.left + mcr.width  / 2;
+    const ty = mcr.top  + mcr.height * 0.15; // 두더지 머리 상단
 
     // ── 어두운 오버레이: 어두워짐 → 히트 플래시 → 다시 어두워짐 → 사라짐 ──
     const overlay = document.createElement('div');
