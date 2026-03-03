@@ -444,11 +444,20 @@ function getTimeLimit() {
     return Math.max(0.1, parseFloat((0.5 - (score - 15) * 0.01).toFixed(3)));
 }
 
-// ─── 두더지 구성 (탄 수에 따라 나중에 확장) ──────────────────────────────────
+// ─── 두더지 구성 ──────────────────────────────────────────────────────────────
+// score  0~ 9: 3/1 (일반 2)
+// score 10~19: 4/2 (일반 2)
+// score 20~29: 4/3 (일반 1)
+// score 30~39: 5/3 (일반 2)
+// score 40~  : 5/4 (일반 1)
+// TODO: 30탄+ 아이디어 — 소수파(minority) 클릭 룰로 전환
+//   5마리 중 더 적은 쪽(일반/스파이)을 클릭. 예) 일반3+스파이2 → 스파이 클릭
+//   단, 규칙화면 안내 문구 변경 + 전환 알림 필요
 function getMoleConfig() {
-    // TODO: 탄 수(score)에 따라 total/spies 늘리기
-    // 예) score >= 30: { total: 4, spies: 2 }
-    //     score >= 50: { total: 4, spies: 3 }
+    if (score >= 40) return { total: 5, spies: 4 };
+    if (score >= 30) return { total: 5, spies: 3 };
+    if (score >= 20) return { total: 4, spies: 3 };
+    if (score >= 10) return { total: 4, spies: 2 };
     return { total: 3, spies: 1 };
 }
 
@@ -1412,18 +1421,31 @@ function strikeClaw(cell, moleIndex) {
     setTimeout(() => {
         clawEl.innerHTML = closedSVG;
 
-        // 두더지 빨려올라감 (fill:forwards → resolveHit 후 cancel로 초기화)
+        // 두더지 빨려올라감: clone을 body에 띄워 overflow:hidden 탈출
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        let upAnim = null;
         if (moleChar) {
-            upAnim = moleChar.animate([
-                { transform: 'translate(-50%, -50%) scale(1)',                  opacity: 1               },
-                { transform: 'translate(-50%, calc(-50% - 70px)) scale(0.8)', opacity: 0.7, offset: 0.3 },
-                { transform: 'translate(-50%, calc(-50% - 130px)) scale(0.3)', opacity: 0               },
-            ], { duration: 500, easing: 'ease-in', fill: 'forwards' });
+            const charRect = moleChar.getBoundingClientRect();
+            const cloneChar = moleChar.cloneNode(true);
+            Object.assign(cloneChar.style, {
+                position: 'fixed',
+                left: `${charRect.left}px`, top: `${charRect.top}px`,
+                width: `${charRect.width}px`, height: `${charRect.height}px`,
+                transform: 'none', margin: '0', zIndex: '86', pointerEvents: 'none',
+            });
+            document.body.appendChild(cloneChar);
+            moleChar.style.opacity = '0';
+
+            cloneChar.animate([
+                { transform: 'scale(1)',       opacity: 1 },
+                { transform: 'translateY(-80px) scale(0.8)',  opacity: 0.8, offset: 0.2 },
+                { transform: 'translateY(-600px) scale(0.3)', opacity: 0 },
+            ], { duration: 800, easing: 'ease-in', fill: 'forwards' });
+
+            setTimeout(() => {
+                try { cloneChar.remove(); } catch(e) {}
+                try { moleChar.style.opacity = ''; } catch(e) {}
+            }, CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
         }
-        setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} },
-            CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
 
         // 잡는 순간 플래시
         const flash = document.createElement('div');
@@ -1524,21 +1546,34 @@ function strikeUFO(cell, moleIndex) {
             { duration: 260, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
 
-        // 두더지 빨려올라가기 (fill:'forwards' → resolveHit 후 cancel로 초기화)
-        // 이동거리: 두더지 중심 → UFO 하단까지 정확히 계산
-        const travelDist = Math.round((cr.top + cr.height / 2) - (ufoEndTop + UFO_BODY_H));
-        const midDist    = Math.round(travelDist * 0.5);
+        // 두더지 빨려올라가기: clone을 body에 띄워 overflow:hidden 탈출, UFO 위치까지 이동
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        let upAnim = null;
         if (moleChar) {
-            upAnim = moleChar.animate([
-                { transform: 'translate(-50%, -50%) scale(1)',                              opacity: 1 },
-                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.6)`,      opacity: 0.7, offset: 0.5 },
-                { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(0.15)`,  opacity: 0 },
+            const charRect  = moleChar.getBoundingClientRect();
+            const cloneChar = moleChar.cloneNode(true);
+            Object.assign(cloneChar.style, {
+                position: 'fixed',
+                left: `${charRect.left}px`, top: `${charRect.top}px`,
+                width: `${charRect.width}px`, height: `${charRect.height}px`,
+                transform: 'none', margin: '0', zIndex: '83', pointerEvents: 'none',
+            });
+            document.body.appendChild(cloneChar);
+            moleChar.style.opacity = '0';
+
+            // 두더지 중심 → UFO 하단까지 정확히 계산
+            const travelDist = Math.round((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H));
+            const midDist    = Math.round(travelDist * 0.5);
+            cloneChar.animate([
+                { transform: 'scale(1)',                                  opacity: 1 },
+                { transform: `translateY(-${midDist}px) scale(0.6)`,     opacity: 0.7, offset: 0.5 },
+                { transform: `translateY(-${travelDist}px) scale(0.15)`, opacity: 0 },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
+
+            setTimeout(() => {
+                try { cloneChar.remove(); } catch(e) {}
+                try { moleChar.style.opacity = ''; } catch(e) {}
+            }, UFO_RESOLVE_MS - UFO_HIT_MS + 250);
         }
-        // resolveHit가 mole을 숨긴 직후 animation cancel → 다음 턴 정상 표시
-        setTimeout(() => { try { upAnim?.cancel(); } catch(e) {} }, UFO_RESOLVE_MS - UFO_HIT_MS + 250);
 
         // 별빛 파티클 (UFO 주변)
         for (let i = 0; i < 8; i++) {
