@@ -376,12 +376,15 @@ function checkHiddenConditions(reactionTime, _hitIndex, isSpy, _stats) {
 const getNextDelay = () => TURN_DELAY_MIN + Math.random() * TURN_DELAY_RNG;
 
 // ─── 보드 스케일 ──────────────────────────────────────────────────────────────
+let boardScale = 1;
+
 function scaleBoard() {
     if (!gameHeader || !boardWrapper || !gameContainer) return;
     const headerH = gameHeader.getBoundingClientRect().height;
     const availW  = window.innerWidth  - 48;
     const availH  = window.innerHeight - headerH - GUN_AREA_H - 14;
     const scale   = Math.min(availW / BOARD_SIZE, availH / BOARD_SIZE);
+    boardScale    = scale;
 
     gameContainer.style.transform = `scale(${scale})`;
     boardWrapper.style.height = `${BOARD_SIZE * scale}px`;
@@ -1421,29 +1424,21 @@ function strikeClaw(cell, moleIndex) {
     setTimeout(() => {
         clawEl.innerHTML = closedSVG;
 
-        // 두더지 빨려올라감: clone을 body에 띄워 overflow:hidden 탈출
+        // 두더지 빨려올라감: mole-hole overflow 해제 후 원본 animate
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        if (moleChar) {
-            const charRect = moleChar.getBoundingClientRect();
-            const cloneChar = moleChar.cloneNode(true);
-            Object.assign(cloneChar.style, {
-                position: 'fixed',
-                left: `${charRect.left}px`, top: `${charRect.top}px`,
-                width: `${charRect.width}px`, height: `${charRect.height}px`,
-                transform: 'none', margin: '0', zIndex: '86', pointerEvents: 'none',
-            });
-            document.body.appendChild(cloneChar);
-            moleChar.style.opacity = '0';
-
-            cloneChar.animate([
-                { transform: 'scale(1)',       opacity: 1 },
-                { transform: 'translateY(-80px) scale(0.8)',  opacity: 0.8, offset: 0.2 },
-                { transform: 'translateY(-600px) scale(0.3)', opacity: 0 },
+        const moleHole = cachedMoles[moleIndex]?.parentElement;
+        if (moleChar && moleHole) {
+            moleHole.style.overflow = 'visible';
+            const upDist = Math.round(600 / boardScale);
+            const midDist = Math.round(upDist * 0.15);
+            moleChar.animate([
+                { transform: 'translate(-50%, -50%) scale(1)',                         opacity: 1 },
+                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.8)`, opacity: 0.8, offset: 0.2 },
+                { transform: `translate(-50%, calc(-50% - ${upDist}px)) scale(0.3)`,  opacity: 0 },
             ], { duration: 800, easing: 'ease-in', fill: 'forwards' });
 
             setTimeout(() => {
-                try { cloneChar.remove(); } catch(e) {}
-                try { moleChar.style.opacity = ''; } catch(e) {}
+                try { moleHole.style.overflow = ''; } catch(e) {}
             }, CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
         }
 
@@ -1546,32 +1541,23 @@ function strikeUFO(cell, moleIndex) {
             { duration: 260, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
 
-        // 두더지 빨려올라가기: clone을 body에 띄워 overflow:hidden 탈출, UFO 위치까지 이동
+        // 두더지 빨려올라가기: mole-hole overflow 해제 후 원본 animate, UFO 위치까지 이동
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        if (moleChar) {
-            const charRect  = moleChar.getBoundingClientRect();
-            const cloneChar = moleChar.cloneNode(true);
-            Object.assign(cloneChar.style, {
-                position: 'fixed',
-                left: `${charRect.left}px`, top: `${charRect.top}px`,
-                width: `${charRect.width}px`, height: `${charRect.height}px`,
-                transform: 'none', margin: '0', zIndex: '83', pointerEvents: 'none',
-            });
-            document.body.appendChild(cloneChar);
-            moleChar.style.opacity = '0';
-
-            // 두더지 중심 → UFO 하단까지 정확히 계산
-            const travelDist = Math.round((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H));
+        const moleHole = cachedMoles[moleIndex]?.parentElement;
+        if (moleChar && moleHole) {
+            moleHole.style.overflow = 'visible';
+            const charRect   = moleChar.getBoundingClientRect();
+            // 뷰포트 픽셀 거리 → 보드 로컬 픽셀로 변환
+            const travelDist = Math.round(((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H)) / boardScale);
             const midDist    = Math.round(travelDist * 0.5);
-            cloneChar.animate([
-                { transform: 'scale(1)',                                  opacity: 1 },
-                { transform: `translateY(-${midDist}px) scale(0.6)`,     opacity: 0.7, offset: 0.5 },
-                { transform: `translateY(-${travelDist}px) scale(0.15)`, opacity: 0 },
+            moleChar.animate([
+                { transform: 'translate(-50%, -50%) scale(1)',                          opacity: 1 },
+                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.6)`,  opacity: 0.7, offset: 0.5 },
+                { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(0.15)`, opacity: 0 },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
 
             setTimeout(() => {
-                try { cloneChar.remove(); } catch(e) {}
-                try { moleChar.style.opacity = ''; } catch(e) {}
+                try { moleHole.style.overflow = ''; } catch(e) {}
             }, UFO_RESOLVE_MS - UFO_HIT_MS + 250);
         }
 
