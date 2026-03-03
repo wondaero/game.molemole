@@ -96,7 +96,6 @@ let isSlowMo          = false;
 let slowMoTimers      = [];
 let isShooting        = false;
 let isPaused          = false;
-let elapsedRafId      = null;
 let pauseData         = null;
 let turnTimerEndTime  = 0;
 let nextTurnTimerEndTime = 0;
@@ -114,7 +113,6 @@ const grid             = document.getElementById('grid');
 const elScore          = document.getElementById('score');
 const elPrevRtWrap     = document.getElementById('prevRtWrap');
 const elPrevRtVal      = document.getElementById('prevRtVal');
-const elElapsed        = null; // 미연결 (moleAppearTime으로 내부 추적)
 const startScreen      = document.getElementById('startScreen');
 const endScreen        = document.getElementById('endScreen');
 const pauseOverlay     = document.getElementById('pauseOverlay');
@@ -507,7 +505,6 @@ function showMoles() {
     });
 
     moleAppearTime = Date.now();
-    startElapsedDisplay();
     SFX.moleAppear();
 
     const timeLimit = getTimeLimit();
@@ -526,7 +523,6 @@ function handleClick(index) {
 
     turnResolved = true;
     clearTimeout(turnTimer);
-    stopElapsedDisplay();
 
     const reactionTime = Date.now() - moleAppearTime;
     const isSpy        = mole.dataset.type === 'spy';
@@ -539,73 +535,26 @@ function handleClick(index) {
     const slowUp   = () => { document.getAnimations().forEach(a => { a.playbackRate = 1; }); SFX.setBGMRate(1); };
     const onHit    = () => { isSpy ? SFX.hitSpy() : SFX.hitNormal(); };
 
+    // 슬로우모션 3단계 타이머 공통 헬퍼
+    const setWeaponTimers = (effectFn, slowStartMs, hitMs, resolveMs) => {
+        effectFn();
+        slowMoTimers = [
+            setTimeout(slowDown, slowStartMs),
+            setTimeout(() => { slowUp(); onHit(); }, hitMs),
+            setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), resolveMs),
+        ];
+    };
+
     switch (equippedWeapon) {
-
-        case 'gun':
-            shootWater(cell);
-            slowMoTimers = [
-                setTimeout(slowDown, SLOW_START_MS),
-                setTimeout(() => { slowUp(); onHit(); }, HIT_WALL_MS),
-                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), HIT_WALL_MS + 900),
-            ];
-            break;
-
-        case 'lightning':
-            strikeLightning(cell, index);
-            slowMoTimers = [
-                setTimeout(slowDown, LIGHTNING_SLOWSTART_MS),
-                setTimeout(() => { slowUp(); onHit(); }, LIGHTNING_HIT_MS),
-                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), LIGHTNING_RESOLVE_MS),
-            ];
-            break;
-
+        case 'gun':        setWeaponTimers(() => shootWater(cell),                SLOW_START_MS,       HIT_WALL_MS,          HIT_WALL_MS + 900);   break;
+        case 'lightning':  setWeaponTimers(() => strikeLightning(cell, index),    LIGHTNING_SLOWSTART_MS, LIGHTNING_HIT_MS,  LIGHTNING_RESOLVE_MS); break;
         case 'bomb':
-        case 'balloon':
-            throwProjectile(cell, index, equippedWeapon);
-            slowMoTimers = [
-                setTimeout(slowDown, THROW_SLOWSTART_MS),
-                setTimeout(() => { slowUp(); onHit(); }, THROW_HIT_MS),
-                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), THROW_RESOLVE_MS),
-            ];
-            break;
-
-        case 'spotlight':
-            strikeSpotlight(cell, index);
-            slowMoTimers = [
-                setTimeout(slowDown, SPOT_SLOWSTART_MS),
-                setTimeout(() => { slowUp(); onHit(); }, SPOT_HIT_MS),
-                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), SPOT_RESOLVE_MS),
-            ];
-            break;
-
-        case 'ufo':
-            strikeUFO(cell, index);
-            slowMoTimers = [
-                setTimeout(slowDown, UFO_SLOWSTART_MS),
-                setTimeout(() => { slowUp(); onHit(); }, UFO_HIT_MS),
-                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), UFO_RESOLVE_MS),
-            ];
-            break;
-
-        case 'target':
-            strikeTarget(cell, index);
-            slowMoTimers = [
-                setTimeout(slowDown, TARGET_SLOWSTART_MS),
-                setTimeout(() => { slowUp(); onHit(); }, TARGET_HIT_MS),
-                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), TARGET_RESOLVE_MS),
-            ];
-            break;
-
-        case 'claw':
-            strikeClaw(cell, index);
-            slowMoTimers = [
-                setTimeout(slowDown, CLAW_SLOWSTART_MS),
-                setTimeout(() => { slowUp(); onHit(); }, CLAW_HIT_MS),
-                setTimeout(() => resolveHit(index, isSpy, reactionTime, cell), CLAW_RESOLVE_MS),
-            ];
-            break;
-
-        default: // hammer (+ w_net 등 미구현 무기 fallback)
+        case 'balloon':    setWeaponTimers(() => throwProjectile(cell, index, equippedWeapon), THROW_SLOWSTART_MS, THROW_HIT_MS, THROW_RESOLVE_MS); break;
+        case 'spotlight':  setWeaponTimers(() => strikeSpotlight(cell, index),    SPOT_SLOWSTART_MS,   SPOT_HIT_MS,          SPOT_RESOLVE_MS);      break;
+        case 'ufo':        setWeaponTimers(() => strikeUFO(cell, index),          UFO_SLOWSTART_MS,    UFO_HIT_MS,           UFO_RESOLVE_MS);       break;
+        case 'target':     setWeaponTimers(() => strikeTarget(cell, index),       TARGET_SLOWSTART_MS, TARGET_HIT_MS,        TARGET_RESOLVE_MS);    break;
+        case 'claw':       setWeaponTimers(() => strikeClaw(cell, index),         CLAW_SLOWSTART_MS,   CLAW_HIT_MS,          CLAW_RESOLVE_MS);      break;
+        default:           // hammer (+ net 등 미구현 fallback)
             swingHammer(cell, index);
             slowMoTimers = [
                 setTimeout(onHit, 150),
@@ -779,7 +728,6 @@ function endGame(reason, elapsedMs = null) {
     slowMoTimers = [];
     document.getAnimations().forEach(a => { a.playbackRate = 1; a.play(); });
     SFX.stopBGM();
-    stopElapsedDisplay();
     pauseOverlay.classList.add('hidden');
     pauseBtn.classList.add('hidden');
 
@@ -828,7 +776,6 @@ function quitGame() {
     slowMoTimers = [];
     document.getAnimations().forEach(a => { a.playbackRate = 1; });
     SFX.stopBGM();
-    stopElapsedDisplay();
     pauseOverlay.classList.add('hidden');
     pauseBtn.classList.add('hidden');
     cachedMoles.forEach(m => m.classList.remove('show'));
@@ -853,8 +800,7 @@ function togglePause() {
         clearTimeout(nextTurnTimer);
         turnTimer = nextTurnTimer = null;
         document.getAnimations().forEach(a => a.pause());
-        stopElapsedDisplay();
-        pauseOverlay.classList.remove('hidden');
+            pauseOverlay.classList.remove('hidden');
         pauseBtn.textContent = '▶ 계속하기';
     } else {
         isPaused = false;
@@ -875,7 +821,6 @@ function togglePause() {
             if (pauseData.moleElapsed >= 0) {
                 // 일시정지 시간만큼 보정하여 경과 표시 정확도 유지
                 moleAppearTime = Date.now() - pauseData.moleElapsed;
-                startElapsedDisplay();
             }
             pauseData = null;
         }
@@ -884,21 +829,6 @@ function togglePause() {
     }
 }
 
-// ─── 실시간 경과시간 ──────────────────────────────────────────────────────────
-function startElapsedDisplay() {
-    stopElapsedDisplay();
-    if (!elElapsed) return;
-    const tick = () => {
-        elElapsed.textContent = moleAppearTime > 0 ? Date.now() - moleAppearTime : 0;
-        elapsedRafId = requestAnimationFrame(tick);
-    };
-    elapsedRafId = requestAnimationFrame(tick);
-}
-
-function stopElapsedDisplay() {
-    if (elapsedRafId) { cancelAnimationFrame(elapsedRafId); elapsedRafId = null; }
-    if (elElapsed) elElapsed.textContent = '-';
-}
 
 // ─── 키보드 단축키 (Esc / P) ──────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {
@@ -1424,21 +1354,21 @@ function strikeClaw(cell, moleIndex) {
     setTimeout(() => {
         clawEl.innerHTML = closedSVG;
 
-        // 두더지 빨려올라감: mole-hole overflow 해제 후 원본 animate
-        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        const moleHole = cachedMoles[moleIndex]?.parentElement;
-        if (moleChar && moleHole) {
-            moleHole.style.overflow = 'visible';
-            const upDist = Math.round(600 / boardScale);
+        // 두더지 빨려올라감: .mole에 overflow:visible 후 원본 animate
+        const molEl   = cachedMoles[moleIndex];
+        const moleChar = molEl?.querySelector('.mole-char');
+        if (moleChar && molEl) {
+            molEl.style.overflow = 'visible';
+            const upDist  = Math.round(600 / boardScale);
             const midDist = Math.round(upDist * 0.15);
-            moleChar.animate([
+            const upAnim  = moleChar.animate([
                 { transform: 'translate(-50%, -50%) scale(1)',                         opacity: 1 },
                 { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.8)`, opacity: 0.8, offset: 0.2 },
                 { transform: `translate(-50%, calc(-50% - ${upDist}px)) scale(0.3)`,  opacity: 0 },
             ], { duration: 800, easing: 'ease-in', fill: 'forwards' });
 
             setTimeout(() => {
-                try { moleHole.style.overflow = ''; } catch(e) {}
+                try { upAnim.cancel(); molEl.style.overflow = ''; } catch(e) {}
             }, CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
         }
 
@@ -1541,23 +1471,23 @@ function strikeUFO(cell, moleIndex) {
             { duration: 260, easing: 'ease-out', fill: 'forwards' })
             .onfinish = () => flash.remove();
 
-        // 두더지 빨려올라가기: mole-hole overflow 해제 후 원본 animate, UFO 위치까지 이동
-        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        const moleHole = cachedMoles[moleIndex]?.parentElement;
-        if (moleChar && moleHole) {
-            moleHole.style.overflow = 'visible';
+        // 두더지 빨려올라가기: .mole에 overflow:visible 후 원본 animate, UFO 위치까지 이동
+        const molEl   = cachedMoles[moleIndex];
+        const moleChar = molEl?.querySelector('.mole-char');
+        if (moleChar && molEl) {
+            molEl.style.overflow = 'visible';
             const charRect   = moleChar.getBoundingClientRect();
             // 뷰포트 픽셀 거리 → 보드 로컬 픽셀로 변환
             const travelDist = Math.round(((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H)) / boardScale);
             const midDist    = Math.round(travelDist * 0.5);
-            moleChar.animate([
-                { transform: 'translate(-50%, -50%) scale(1)',                          opacity: 1 },
-                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.6)`,  opacity: 0.7, offset: 0.5 },
+            const upAnim     = moleChar.animate([
+                { transform: 'translate(-50%, -50%) scale(1)',                             opacity: 1 },
+                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.6)`,     opacity: 0.7, offset: 0.5 },
                 { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(0.15)`, opacity: 0 },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
 
             setTimeout(() => {
-                try { moleHole.style.overflow = ''; } catch(e) {}
+                try { upAnim.cancel(); molEl.style.overflow = ''; } catch(e) {}
             }, UFO_RESOLVE_MS - UFO_HIT_MS + 250);
         }
 

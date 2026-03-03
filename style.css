@@ -166,7 +166,6 @@ body {
 /* ══════════ 두더지 캐릭터 (120×120 기준) ══════════ */
 .mole-char {
     position: absolute;
-    /* inset: 0; */
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -181,15 +180,6 @@ body {
     border-radius: 50%;
     
 }
-
-/* 몸통: 구 .mole-body 대체 */
-/* .mole-char::before {
-    content: '';
-    position: absolute;
-    top: 10px;
-    left: 18px;
-    z-index: 1;
-} */
 
 /* 눈: 얼굴 위쪽 */
 .mole-eyes {
