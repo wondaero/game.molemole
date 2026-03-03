@@ -476,6 +476,25 @@ body.equipped-crown1 .mole-item div{
 .intro-btn.exit          { opacity: 0.35; cursor: default; }
 .intro-btn.exit:hover    { background: rgba(255,255,255,0.08); transform: none; }
 
+/* ── 디버그 버튼 ── */
+.debug-btns {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 12px;
+}
+.debug-btns button {
+    font-size: 0.65rem;
+    padding: 3px 10px;
+    background: rgba(255, 60, 60, 0.12);
+    border: 1px solid rgba(255, 60, 60, 0.25);
+    border-radius: 6px;
+    color: rgba(255, 100, 100, 0.6);
+    cursor: pointer;
+    font-family: inherit;
+}
+.debug-btns button:hover { background: rgba(255, 60, 60, 0.25); }
+
 /* ── 서브 스크린 (콜렉션, 설정) ── */
 .sub-screen {
     position: fixed;

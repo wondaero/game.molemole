@@ -39,6 +39,20 @@ function saveStats(stats) {
     localStorage.setItem(STATS_KEY, JSON.stringify(stats));
 }
 
+// ─── 디버그 유틸 ───────────────────────────────────────────────────────────────
+function debugResetStats() {
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STATS_KEY);
+    alert('기록이 초기화되었습니다.');
+}
+
+function debugResetCollection() {
+    localStorage.removeItem(COLLECTION_KEY);
+    localStorage.removeItem(EQUIPPED_KEY);
+    [...COLLECTION_DATA.normal, ...COLLECTION_DATA.hidden].forEach(i => i.unlocked = false);
+    alert('콜렉션이 초기화되었습니다.');
+}
+
 // ─── 상수 ────────────────────────────────────────────────────────────────────
 const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
@@ -264,6 +278,8 @@ function switchCollTab(tab) {
 const COLLECTION_KEY = 'molemole_collection';
 
 function loadCollection() {
+    // 먼저 전부 false 초기화 (코드 기본값 무시)
+    [...COLLECTION_DATA.normal, ...COLLECTION_DATA.hidden].forEach(item => item.unlocked = false);
     try {
         const saved = JSON.parse(localStorage.getItem(COLLECTION_KEY));
         if (!saved) return;
@@ -619,25 +635,18 @@ function resolveHit(index, isSpy, reactionTime, cell) {
         nextTurnTimer = setTimeout(showMoles, delay);
     };
 
-    // 선물 드롭: 미수집 일반 아이템이 없으면 확률 자체가 0
-    if (!canDropGifts) {
+    // 선물 드롭: 미획득 아이템 풀에서 랜덤 (테마/스킨 제외)
+    const DROP_CATS = new Set(['무기', '모자', '안경', '장신구', '효과']);
+    const giftPool = canDropGifts
+        ? COLLECTION_DATA.normal.filter(i => !i.unlocked && DROP_CATS.has(i.cat))
+        : [];
+
+    if (giftPool.length > 0) {
+        const item = giftPool[Math.floor(Math.random() * giftPool.length)];
+        showGift(index, item, startNext);
+    } else {
         cachedGifts[index].classList.remove('show');
         startNext();
-    } else {
-        // TODO: 릴리즈 전 locked 체크 복원 + 확률 복원 (탄 × 0.5%)
-        // 테스트: 3종 풀에서 랜덤 드롭 (unlocked 무시)
-        {
-            const TEST_POOL = ['pin-ribbon1', 'tie-ribbon1', 'crown1'];
-            const allNormal = COLLECTION_DATA.normal;
-            const pool = allNormal.filter(i => TEST_POOL.includes(i.id));
-            const item = pool[Math.floor(Math.random() * pool.length)];
-            if (true) {
-                showGift(index, item, startNext);
-            } else {
-                cachedGifts[index].classList.remove('show');
-                startNext();
-            }
-        }
     }
 }
 
