@@ -378,6 +378,70 @@ body.equipped-crown1 .mole-item div{
     box-shadow: 0 -1px 8px green;
 }
 
+/* ── 야구모자 (h_cap) ── */
+body.equipped-h_cap .mole-item {
+    display: block;
+    width: 54px;
+    height: 22px;
+    background: #e53e3e;
+    border-radius: 27px 27px 4px 4px;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+body.equipped-h_cap .mole-item:before {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: -5px;
+    width: 64px;
+    height: 7px;
+    background: #c53030;
+    border-radius: 2px;
+}
+body.equipped-h_cap .mole-item:after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    background: #c53030;
+    border-radius: 50%;
+}
+
+/* ── 실크햟 (h_tophat) ── */
+body.equipped-h_tophat .mole-item {
+    display: block;
+    width: 32px;
+    height: 30px;
+    background: #1a1a1a;
+    border-radius: 2px 2px 0 0;
+    top: -38px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+body.equipped-h_tophat .mole-item:before {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: -14px;
+    width: 60px;
+    height: 8px;
+    background: #111;
+    border-radius: 3px;
+}
+body.equipped-h_tophat .mole-item:after {
+    content: '';
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: rgba(255,255,255,0.12);
+}
+
 /* 스파이 안경 */
 .spy-glasses {
     position: absolute;
@@ -777,6 +841,14 @@ body.equipped-crown1 .mole-item div{
 }
 .pause-btn:hover {
     background: rgba(255,255,255,0.3);
+}
+.pause-btn--blocked {
+    opacity: 0.3;
+    cursor: default;
+}
+.pause-btn--blocked:hover {
+    background: rgba(255,255,255,0.15);
+    transform: none;
 }
 
 .pause-overlay {

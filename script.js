@@ -268,6 +268,7 @@ function showMoles() {
     });
 
     moleAppearTime = Date.now();
+    pauseBtn.classList.add('pause-btn--blocked');
     SFX.moleAppear();
 
     const timeLimit = getTimeLimit();
@@ -328,6 +329,7 @@ function handleClick(index) {
 // ─── 히트 결과 처리 (무기 공통) ───────────────────────────────────────────────
 function resolveHit(index, isSpy, reactionTime, cell) {
     isSlowMo = false;
+    pauseBtn.classList.remove('pause-btn--blocked');
     cell.style.zIndex = '';
     cachedMoles.forEach(m => {
         m.classList.remove('show', 'spy', 'normal');
@@ -501,9 +503,22 @@ function endGame(reason, elapsedMs = null) {
     endScreen.classList.remove('hidden');
 }
 
-// ─── 탭 이탈 ─────────────────────────────────────────────────────────────────
+// ─── 앱 전환 / 탭 이탈 → 자동 일시정지 ──────────────────────────────────────
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden && gameActive) endGame('게임 화면을 벗어났습니다.');
+    if (!document.hidden || !gameActive || isPaused || isSlowMo) return;
+    isPaused = true;
+    const now = Date.now();
+    pauseData = {
+        turnRemaining: turnTimer     ? turnTimerEndTime     - now : -1,
+        nextRemaining: nextTurnTimer ? nextTurnTimerEndTime - now : -1,
+        moleElapsed:   moleAppearTime > 0 ? now - moleAppearTime : -1,
+    };
+    clearTimeout(turnTimer);
+    clearTimeout(nextTurnTimer);
+    turnTimer = nextTurnTimer = null;
+    document.getAnimations().forEach(a => a.pause());
+    pauseOverlay.classList.remove('hidden');
+    pauseBtn.textContent = '▶ 계속하기';
 });
 
 // ─── 게임 중단 ────────────────────────────────────────────────────────────────

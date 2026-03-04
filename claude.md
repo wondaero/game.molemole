@@ -175,8 +175,8 @@ script.js       ← 게임 핵심 (상태, 로직, 네비게이션, 스케일, i
 | `tie-ribbon1` | 보타이 | ✅ 작성됨 | 콜렉션 연결됨 |
 | `crown1` | 왕관 | ✅ 작성됨 | 콜렉션 연결됨 |
 | `headset` | 헤드셋 | ✅ 작성됨 | 콜렉션 연결됨 (모자 카테고리) |
-| `h_cap` | 야구모자 | ❌ 미작성 | 콜렉션에 있음 |
-| `h_tophat` | 실크햇 | ❌ 미작성 | 콜렉션에 있음 |
+| `h_cap` | 야구모자 | ✅ 작성됨 | 빨간 돔+챙 |
+| `h_tophat` | 실크햣 | ✅ 작성됨 | 검정 실크햣 |
 
 ### 디버그 유틸
 - `debugResetStats()`: `molemole_best` + `molemole_stats` localStorage 삭제
@@ -233,7 +233,7 @@ introScreen, collectionScreen, settingsScreen
 ## 미구현 / TODO
 
 - 사운드: `SFX` 객체 stub만 있음 (파일 미연결)
-- 악세사리 CSS 미작성: `h_cap` (야구모자), `h_tophat` (실크햇)
+
 - 콜렉션 아이템 실제 cosmetic 적용 (테마/스킨 등)
 - 히든 콜렉션 해금 조건 (`checkHiddenConditions()` 미구현)
 - 설정 화면 미구현
