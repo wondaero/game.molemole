@@ -58,6 +58,7 @@ const BOARD_SIZE       = 550;   // --cell:120×4 + gap:10×3 + pad:20×2
 const GUN_AREA_H       = 110;   // 물총 영역 높이 (보드 스케일 계산 시 제외)
 const TURN_DELAY_MIN   = 800;
 const TURN_DELAY_RNG   = 1200;
+const DROP_CATS        = new Set(['무기', '모자', '안경', '장신구', '효과']);
 
 // ─── 게임 상태 ────────────────────────────────────────────────────────────────
 let score             = 0;
@@ -310,10 +311,10 @@ function handleClick(index) {
 
     switch (equippedWeapon) {
         case 'gun':        setWeaponTimers(() => shootWater(cell),                SLOW_START_MS,       HIT_WALL_MS,          HIT_WALL_MS + 900);   break;
-        case 'lightning':  setWeaponTimers(() => strikeLightning(cell, index),    LIGHTNING_SLOWSTART_MS, LIGHTNING_HIT_MS,  LIGHTNING_RESOLVE_MS); break;
+        case 'lightning':  setWeaponTimers(() => strikeLightning(cell),           LIGHTNING_SLOWSTART_MS, LIGHTNING_HIT_MS,  LIGHTNING_RESOLVE_MS); break;
         case 'bomb':
         case 'balloon':    setWeaponTimers(() => throwProjectile(cell, index, equippedWeapon), THROW_SLOWSTART_MS, THROW_HIT_MS, THROW_RESOLVE_MS); break;
-        case 'spotlight':  setWeaponTimers(() => strikeSpotlight(cell, index),    SPOT_SLOWSTART_MS,   SPOT_HIT_MS,          SPOT_RESOLVE_MS);      break;
+        case 'spotlight':  setWeaponTimers(() => strikeSpotlight(cell),           SPOT_SLOWSTART_MS,   SPOT_HIT_MS,          SPOT_RESOLVE_MS);      break;
         case 'ufo':        setWeaponTimers(() => strikeUFO(cell, index),          UFO_SLOWSTART_MS,    UFO_HIT_MS,           UFO_RESOLVE_MS);       break;
         case 'target':     setWeaponTimers(() => strikeTarget(cell, index),       TARGET_SLOWSTART_MS, TARGET_HIT_MS,        TARGET_RESOLVE_MS);    break;
         case 'claw':       setWeaponTimers(() => strikeClaw(cell, index),         CLAW_SLOWSTART_MS,   CLAW_HIT_MS,          CLAW_RESOLVE_MS);      break;
@@ -373,7 +374,6 @@ function resolveHit(index, isSpy, reactionTime, cell) {
         nextTurnTimer = setTimeout(showMoles, delay);
     };
 
-    const DROP_CATS = new Set(['무기', '모자', '안경', '장신구', '효과']);
     const giftPool = canDropGifts
         ? COLLECTION_DATA.normal.filter(i => !i.unlocked && DROP_CATS.has(i.cat))
         : [];
@@ -456,13 +456,8 @@ function startGame() {
     nextTurnTimer = setTimeout(showMoles, delay);
 }
 
-// ─── 게임 종료 ────────────────────────────────────────────────────────────────
-function endGame(reason, elapsedMs = null) {
-    const currentTimeLimit = getTimeLimit();
-    const actualElapsed    = elapsedMs !== null
-        ? elapsedMs
-        : (moleAppearTime > 0 ? Math.round(Date.now() - moleAppearTime) : 0);
-
+// ─── 공통 게임 정리 ───────────────────────────────────────────────────────────
+function cleanupGame() {
     gameActive = false;
     isSlowMo   = false;
     isPaused   = false;
@@ -475,6 +470,16 @@ function endGame(reason, elapsedMs = null) {
     SFX.stopBGM();
     pauseOverlay.classList.add('hidden');
     pauseBtn.classList.add('hidden');
+}
+
+// ─── 게임 종료 ────────────────────────────────────────────────────────────────
+function endGame(reason, elapsedMs = null) {
+    const currentTimeLimit = getTimeLimit();
+    const actualElapsed    = elapsedMs !== null
+        ? elapsedMs
+        : (moleAppearTime > 0 ? Math.round(Date.now() - moleAppearTime) : 0);
+
+    cleanupGame();
 
     const avgReaction  = reactionTimes.length > 0
         ? Math.round(reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length) : 0;
@@ -523,18 +528,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ─── 게임 중단 ────────────────────────────────────────────────────────────────
 function quitGame() {
-    gameActive = false;
-    isSlowMo   = false;
-    isPaused   = false;
-    pauseData  = null;
-    clearTimeout(turnTimer);
-    clearTimeout(nextTurnTimer);
-    slowMoTimers.forEach(clearTimeout);
-    slowMoTimers = [];
-    document.getAnimations().forEach(a => { a.playbackRate = 1; });
-    SFX.stopBGM();
-    pauseOverlay.classList.add('hidden');
-    pauseBtn.classList.add('hidden');
+    cleanupGame();
     cachedMoles.forEach(m => m.classList.remove('show'));
     if (score > 0) saveBest(score);
     navigateTo('intro');

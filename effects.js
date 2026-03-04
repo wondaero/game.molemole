@@ -37,6 +37,41 @@ const CLAW_RESOLVE_MS    = CLAW_HIT_MS + 850;
 // ── 물총 조준점 (구멍 내 상대 위치, 0.0~1.0) ──────────────────────────────────
 const GUN_AIM = { x: 0.5, y: 0.6 };
 
+// ─── 공통 헬퍼 ────────────────────────────────────────────────────────────────
+function makeFlash(color, duration = 180, zIndex = 90) {
+    const el = document.createElement('div');
+    Object.assign(el.style, {
+        position: 'fixed', inset: '0',
+        background: color, pointerEvents: 'none', zIndex,
+    });
+    document.body.appendChild(el);
+    el.animate([{ opacity: 1 }, { opacity: 0 }],
+        { duration, easing: 'ease-out', fill: 'forwards' })
+        .onfinish = () => el.remove();
+}
+
+function createMoleClone(moleIndex, zIndex) {
+    const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
+    if (!moleChar) return null;
+    const rect  = moleChar.getBoundingClientRect();
+    const clone = moleChar.cloneNode(true);
+    if (cachedMoles[moleIndex].classList.contains('spy')) {
+        const g = clone.querySelector('.spy-glasses');
+        if (g) g.style.display = 'flex';
+    }
+    Object.assign(clone.style, {
+        position: 'fixed',
+        left: `${rect.left + rect.width  / 2}px`,
+        top:  `${rect.top  + rect.height / 2}px`,
+        width: '84px', height: '84px',
+        transform: `translate(-50%, -50%) scale(${boardScale})`,
+        margin: '0', zIndex: String(zIndex), pointerEvents: 'none',
+    });
+    document.body.appendChild(clone);
+    moleChar.style.opacity = '0';
+    return { clone, moleChar, rect };
+}
+
 // ─── 망치 이펙트 ──────────────────────────────────────────────────────────────
 function swingHammer(cell, moleIndex) {
     const cr = cell.getBoundingClientRect();
@@ -136,16 +171,7 @@ function strikeLightning(cell) {
     ], { duration: 350, easing: 'ease-in', fill: 'forwards' }).onfinish = () => svg.remove();
 
     setTimeout(() => {
-        const flash = document.createElement('div');
-        Object.assign(flash.style, {
-            position: 'fixed', inset: '0',
-            background: 'rgba(255, 248, 130, 0.45)',
-            pointerEvents: 'none', zIndex: '90',
-        });
-        document.body.appendChild(flash);
-        flash.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 180, easing: 'ease-out', fill: 'forwards' })
-            .onfinish = () => flash.remove();
+        makeFlash('rgba(255, 248, 130, 0.45)', 180);
 
         for (let i = 0; i < 10; i++) {
             const sz   = 3 + Math.random() * 6;
@@ -240,16 +266,7 @@ function throwProjectile(cell, moleIndex, type) {
         }
 
         if (type === 'bomb') {
-            const flash = document.createElement('div');
-            Object.assign(flash.style, {
-                position: 'fixed', inset: '0',
-                background: 'rgba(255,100,0,0.28)',
-                pointerEvents: 'none', zIndex: '90',
-            });
-            document.body.appendChild(flash);
-            flash.animate([{ opacity: 1 }, { opacity: 0 }],
-                { duration: 220, easing: 'ease-out', fill: 'forwards' })
-                .onfinish = () => flash.remove();
+            makeFlash('rgba(255,100,0,0.28)', 220);
 
             for (let i = 0; i < 18; i++) {
                 const sz  = 5 + Math.random() * 14;
@@ -523,47 +540,37 @@ function strikeClaw(cell, moleIndex) {
 
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
-            const charRect = moleChar.getBoundingClientRect();
-            const clone    = moleChar.cloneNode(true);
-            if (cachedMoles[moleIndex].classList.contains('spy')) {
-                const g = clone.querySelector('.spy-glasses');
-                if (g) g.style.display = 'flex';
-            }
-            Object.assign(clone.style, {
+            const rect = moleChar.getBoundingClientRect();
+            Object.assign(moleChar.style, {
                 position: 'fixed',
-                left: `${charRect.left + charRect.width  / 2}px`,
-                top:  `${charRect.top  + charRect.height / 2}px`,
+                left: `${rect.left + rect.width  / 2}px`,
+                top:  `${rect.top  + rect.height / 2}px`,
                 width: '84px', height: '84px',
                 transform: `translate(-50%, -50%) scale(${boardScale})`,
                 margin: '0', zIndex: '86', pointerEvents: 'none',
             });
-            document.body.appendChild(clone);
-            moleChar.style.opacity = '0';
+            document.body.appendChild(moleChar);
 
             const upDist = Math.round(descendDist + 700);
             const upDur  = totalDur - CLAW_HIT_MS - PAUSE_DUR;
+            let upAnim;
             setTimeout(() => {
-                clone.animate([
+                upAnim = moleChar.animate([
                     { transform: `translate(-50%, -50%) scale(${boardScale})`,              opacity: 1 },
                     { transform: `translate(-50%, calc(-50% - ${upDist}px)) scale(${boardScale * 0.15})`, opacity: 0 },
                 ], { duration: upDur, easing: 'ease-in', fill: 'forwards' });
             }, PAUSE_DUR);
 
             setTimeout(() => {
-                try { clone.remove(); moleChar.style.opacity = ''; } catch(e) {}
+                try {
+                    upAnim?.cancel();
+                    moleChar.style.cssText = '';
+                    cachedMoles[moleIndex].appendChild(moleChar);
+                } catch(e) {}
             }, CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
         }
 
-        const flash = document.createElement('div');
-        Object.assign(flash.style, {
-            position: 'fixed', inset: '0',
-            background: 'rgba(255,240,180,0.38)',
-            pointerEvents: 'none', zIndex: '90',
-        });
-        document.body.appendChild(flash);
-        flash.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 180, easing: 'ease-out', fill: 'forwards' })
-            .onfinish = () => flash.remove();
+        makeFlash('rgba(255,240,180,0.38)', 180);
     }, CLAW_HIT_MS);
 }
 
@@ -635,35 +642,11 @@ function strikeUFO(cell, moleIndex) {
         .onfinish = () => ufo.remove();
 
     setTimeout(() => {
-        const flash = document.createElement('div');
-        Object.assign(flash.style, {
-            position: 'fixed', inset: '0',
-            background: 'rgba(100,200,255,0.28)',
-            pointerEvents: 'none', zIndex: '90',
-        });
-        document.body.appendChild(flash);
-        flash.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 260, easing: 'ease-out', fill: 'forwards' })
-            .onfinish = () => flash.remove();
+        makeFlash('rgba(100,200,255,0.28)', 260);
 
-        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-        if (moleChar) {
-            const charRect   = moleChar.getBoundingClientRect();
-            const clone      = moleChar.cloneNode(true);
-            if (cachedMoles[moleIndex].classList.contains('spy')) {
-                const g = clone.querySelector('.spy-glasses');
-                if (g) g.style.display = 'flex';
-            }
-            Object.assign(clone.style, {
-                position: 'fixed',
-                left: `${charRect.left + charRect.width  / 2}px`,
-                top:  `${charRect.top  + charRect.height / 2}px`,
-                width: '84px', height: '84px',
-                transform: `translate(-50%, -50%) scale(${boardScale})`,
-                margin: '0', zIndex: '83', pointerEvents: 'none',
-            });
-            document.body.appendChild(clone);
-            moleChar.style.opacity = '0';
+        const cloneData = createMoleClone(moleIndex, 83);
+        if (cloneData) {
+            const { clone, moleChar, rect: charRect } = cloneData;
 
             const travelDist = Math.round((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H));
             const midDist    = Math.round(travelDist * 0.5);
@@ -752,16 +735,7 @@ function strikeTarget(cell, moleIndex) {
     ], { duration: TARGET_HIT_MS, easing: 'cubic-bezier(0.25,0,0.35,1)', fill: 'forwards' });
 
     setTimeout(() => {
-        const flash = document.createElement('div');
-        Object.assign(flash.style, {
-            position: 'fixed', inset: '0',
-            background: 'rgba(255,40,40,0.22)',
-            pointerEvents: 'none', zIndex: '90',
-        });
-        document.body.appendChild(flash);
-        flash.animate([{ opacity: 1 }, { opacity: 0 }],
-            { duration: 180, easing: 'ease-out', fill: 'forwards' })
-            .onfinish = () => flash.remove();
+        makeFlash('rgba(255,40,40,0.22)', 180);
 
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
