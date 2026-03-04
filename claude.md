@@ -11,12 +11,21 @@
 ## 파일 구조
 
 ```
-index.html   ← 메인 게임
-style.css    ← 스타일
-script.js    ← 게임 로직
+index.html      ← 메인 게임 (script 로드 순서: data→collection→effects→script)
+style.css       ← 스타일
+data.js         ← COLLECTION_DATA (콜렉션 아이템 데이터)
+collection.js   ← 콜렉션/장착 시스템 (loadCollection, renderCollection, equipItem 등)
+effects.js      ← 무기 이펙트 + 타이밍 상수 (swingHammer, shootWater, ... strikeTarget)
+script.js       ← 게임 핵심 (상태, 로직, 네비게이션, 스케일, initGrid)
 ```
 
-순수 HTML/CSS/JS, 라이브러리 없음. 폰트: Pretendard CDN (jsdelivr)
+순수 HTML/CSS/JS, 라이브러리 없음. 멀티 script 태그 (전역 스코프 공유). 폰트: Pretendard CDN (jsdelivr)
+
+**전역 의존 관계 (로드 순서 기준)**
+- `data.js` → 의존 없음
+- `collection.js` → `COLLECTION_DATA` (data.js), 런타임에 `reactionTimes`, `lastHitIndices` (script.js)
+- `effects.js` → 런타임에 `boardScale`, `cachedMoles`, `gun`, `muzzlePt`, `isShooting` (script.js)
+- `script.js` → `COLLECTION_DATA` (data.js), `equippedWeapon`, `loadCollection`, `loadEquipped`, `applyEquipped`, `renderCollection`, `checkHiddenConditions` (collection.js), 모든 이펙트 함수 + 타이밍 상수 (effects.js)
 
 ---
 
@@ -147,7 +156,7 @@ script.js    ← 게임 로직
 - 단축키: Esc / P
 
 ### 콜렉션 시스템
-- `COLLECTION_DATA.normal` (25개): 무기 9 / 테마 3 / 스킨 3 / 모자 5 / 안경 2 / 장신구 2 / 효과 2
+- `COLLECTION_DATA.normal` (27개): 무기 9 / 테마 3 / 스킨 3 / 모자 6 / 안경 2 / 장신구 2 / 효과 2
 - `COLLECTION_DATA.hidden` (5개): 특수 조건 해금 (조건 미구현, `checkHiddenConditions()` stub)
 - localStorage: `molemole_collection` (해금 ID 배열), `molemole_equipped` (`무기` + `악세사리` 1슬롯)
 - `loadCollection()`: **먼저 전부 false 초기화** 후 localStorage 기반으로 true 복원
@@ -160,13 +169,14 @@ script.js    ← 게임 로직
 - CSS 작성 방식: `body.equipped-{id} .mole-item { display:block; ... }`
 
 ### 악세사리 아이템 ID 현황
-| ID | 이름 | CSS 상태 |
-|---|---|---|
-| `pin-ribbon1` | 리본 삔 | ✅ 작성됨 |
-| `tie-ribbon1` | 보타이 | ✅ 작성됨 |
-| `crown1` | 왕관 | ✅ 작성됨 |
-| `h_cap` | 야구모자 | ❌ 미작성 |
-| `h_tophat` | 실크햇 | ❌ 미작성 |
+| ID | 이름 | CSS 상태 | 비고 |
+|---|---|---|---|
+| `pin-ribbon1` | 리본 삔 | ✅ 작성됨 | 콜렉션 연결됨 |
+| `tie-ribbon1` | 보타이 | ✅ 작성됨 | 콜렉션 연결됨 |
+| `crown1` | 왕관 | ✅ 작성됨 | 콜렉션 연결됨 |
+| `headset` | 헤드셋 | ✅ 작성됨 | 콜렉션 연결됨 (모자 카테고리) |
+| `h_cap` | 야구모자 | ❌ 미작성 | 콜렉션에 있음 |
+| `h_tophat` | 실크햇 | ❌ 미작성 | 콜렉션에 있음 |
 
 ### 디버그 유틸
 - `debugResetStats()`: `molemole_best` + `molemole_stats` localStorage 삭제
@@ -223,7 +233,7 @@ introScreen, collectionScreen, settingsScreen
 ## 미구현 / TODO
 
 - 사운드: `SFX` 객체 stub만 있음 (파일 미연결)
-- 악세사리 CSS 미작성: `h_cap`, `h_tophat` (야구모자, 실크햇)
+- 악세사리 CSS 미작성: `h_cap` (야구모자), `h_tophat` (실크햇)
 - 콜렉션 아이템 실제 cosmetic 적용 (테마/스킨 등)
 - 히든 콜렉션 해금 조건 (`checkHiddenConditions()` 미구현)
 - 설정 화면 미구현
