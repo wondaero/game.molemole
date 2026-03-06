@@ -175,17 +175,18 @@ function initGrid() {
         cell.className = 'cell';
 
         const mole = document.createElement('div');
-        mole.className = 'mole';
-        mole.innerHTML = `
-          <div class="mole-char">
+        mole.className = 'mole'; // 팝업 애니메이션 전용 (빈 컨테이너, ::after로 몸통 시각 제공)
+
+        const moleChar = document.createElement('div');
+        moleChar.className = 'mole-char';
+        moleChar.innerHTML = `
             <div class="spy-glasses"></div>
             <div class="mole-eyes"></div>
             <div class="mole-snout">
               <div class="mole-nose"></div>
               <div class="mole-mouse"></div>
             </div>
-            <div class="mole-item"><div></div></div>
-          </div>`;
+            <div class="mole-item"><div></div></div>`;
 
         const gift = document.createElement('div');
         gift.className   = 'gift';
@@ -199,13 +200,14 @@ function initGrid() {
         const hole = document.createElement('div');
         hole.className = 'mole-hole';
         hole.appendChild(clip);
+        hole.appendChild(moleChar); // clip 밖 → overflow 클리핑 없이 위로 자유롭게 이동 가능
 
         cell.appendChild(hole);
         cell.addEventListener('pointerdown', () => handleClick(i));
         grid.appendChild(cell);
 
         cachedCells.push(cell);
-        cachedMoles.push(mole);
+        cachedMoles.push(hole); // .mole-hole 저장 (show/spy 클래스 + querySelector 대상)
         cachedGifts.push(gift);
     }
 }

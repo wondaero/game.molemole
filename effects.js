@@ -50,27 +50,6 @@ function makeFlash(color, duration = 180, zIndex = 90) {
         .onfinish = () => el.remove();
 }
 
-function createMoleClone(moleIndex, zIndex) {
-    const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
-    if (!moleChar) return null;
-    const rect  = moleChar.getBoundingClientRect();
-    const clone = moleChar.cloneNode(true);
-    if (cachedMoles[moleIndex].classList.contains('spy')) {
-        const g = clone.querySelector('.spy-glasses');
-        if (g) g.style.display = 'flex';
-    }
-    Object.assign(clone.style, {
-        position: 'fixed',
-        left: `${rect.left + rect.width  / 2}px`,
-        top:  `${rect.top  + rect.height / 2}px`,
-        width: '84px', height: '84px',
-        transform: `translate(-50%, -50%) scale(${boardScale})`,
-        margin: '0', zIndex: String(zIndex), pointerEvents: 'none',
-    });
-    document.body.appendChild(clone);
-    moleChar.style.opacity = '0';
-    return { clone, moleChar, rect };
-}
 
 // ─── 망치 이펙트 ──────────────────────────────────────────────────────────────
 function swingHammer(cell, moleIndex) {
@@ -540,34 +519,18 @@ function strikeClaw(cell, moleIndex) {
 
         const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
         if (moleChar) {
-            const rect = moleChar.getBoundingClientRect();
-            Object.assign(moleChar.style, {
-                position: 'fixed',
-                left: `${rect.left + rect.width  / 2}px`,
-                top:  `${rect.top  + rect.height / 2}px`,
-                width: '84px', height: '84px',
-                transform: `translate(-50%, -50%) scale(${boardScale})`,
-                margin: '0', zIndex: '86', pointerEvents: 'none',
-            });
-            document.body.appendChild(moleChar);
-
-            const upDist = Math.round(descendDist + 700);
+            // mole-char가 .mole-clip 밖에 있어 클리핑 없이 위로 이동 가능
+            const upDist = Math.round((descendDist + 700) / boardScale);
             const upDur  = totalDur - CLAW_HIT_MS - PAUSE_DUR;
             let upAnim;
             setTimeout(() => {
                 upAnim = moleChar.animate([
-                    { transform: `translate(-50%, -50%) scale(${boardScale})`,              opacity: 1 },
-                    { transform: `translate(-50%, calc(-50% - ${upDist}px)) scale(${boardScale * 0.15})`, opacity: 0 },
+                    { transform: 'translate(-50%, -50%)',                                              opacity: 1 },
+                    { transform: `translate(-50%, calc(-50% - ${upDist}px)) scale(0.15)`,             opacity: 0 },
                 ], { duration: upDur, easing: 'ease-in', fill: 'forwards' });
             }, PAUSE_DUR);
 
-            setTimeout(() => {
-                try {
-                    upAnim?.cancel();
-                    moleChar.style.cssText = '';
-                    cachedMoles[moleIndex].appendChild(moleChar);
-                } catch(e) {}
-            }, CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
+            setTimeout(() => upAnim?.cancel(), CLAW_RESOLVE_MS - CLAW_HIT_MS + 250);
         }
 
         makeFlash('rgba(255,240,180,0.38)', 180);
@@ -644,20 +607,20 @@ function strikeUFO(cell, moleIndex) {
     setTimeout(() => {
         makeFlash('rgba(100,200,255,0.28)', 260);
 
-        const cloneData = createMoleClone(moleIndex, 83);
-        if (cloneData) {
-            const { clone, moleChar, rect: charRect } = cloneData;
-
-            const travelDist = Math.round((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H));
+        const moleChar = cachedMoles[moleIndex]?.querySelector('.mole-char');
+        if (moleChar) {
+            // mole-char가 .mole-clip 밖에 있어 클리핑 없이 UFO로 이동 가능
+            const charRect   = moleChar.getBoundingClientRect();
+            const travelDist = Math.round(((charRect.top + charRect.height / 2) - (ufoEndTop + UFO_BODY_H)) / boardScale);
             const midDist    = Math.round(travelDist * 0.5);
-            clone.animate([
-                { transform: `translate(-50%, -50%) scale(${boardScale})`,                                          opacity: 1   },
-                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(${boardScale * 0.6})`,               opacity: 0.7, offset: 0.5 },
-                { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(${boardScale * 0.15})`,           opacity: 0   },
+            const upAnim = moleChar.animate([
+                { transform: 'translate(-50%, -50%)',                                                   opacity: 1   },
+                { transform: `translate(-50%, calc(-50% - ${midDist}px)) scale(0.6)`,                  opacity: 0.7, offset: 0.5 },
+                { transform: `translate(-50%, calc(-50% - ${travelDist}px)) scale(0.15)`,              opacity: 0   },
             ], { duration: 380, easing: 'ease-in', fill: 'forwards' });
 
             setTimeout(() => {
-                try { clone.remove(); moleChar.style.opacity = ''; } catch(e) {}
+                try { upAnim.cancel(); } catch(e) {}
             }, UFO_RESOLVE_MS - UFO_HIT_MS + 250);
         }
 

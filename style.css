@@ -94,7 +94,6 @@ body {
     inset: 0;
 }
 
-/* 팝업 클리핑 - UFO/claw 시 overflow:visible로 토글하여 탈출 허용 */
 .mole-clip {
     position: absolute;
     inset: 0;
@@ -114,8 +113,31 @@ body {
     transition: transform 0.18s ease-out;
 }
 
-.mole.show {
+/* 팝업 시 두더지 몸통 시각 (mole-char가 clip 밖에 있으므로 ::after로 대체) */
+.mole::after {
+    content: '';
+    position: absolute;
+    width: 84px;
+    height: 84px;
+    background: #8B6448;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.mole-hole.show .mole {
     transform: translateY(0);
+}
+
+/* mole-char는 .mole-clip 밖 (.mole-hole 직속) — 위로 자유롭게 탈출 가능 */
+.mole-hole .mole-char {
+    opacity: 0;
+    transition: opacity 0.18s ease-out;
+}
+
+.mole-hole.show .mole-char {
+    opacity: 1;
 }
 
 /* ── 선물 (두더지와 동일하게 슬라이드 업) ── */
@@ -454,7 +476,7 @@ body.equipped-h_tophat .mole-item:after {
     z-index: 3;
     border-top: 2px solid #fff;
 }
-.mole.spy .spy-glasses,
+.mole-hole.spy .spy-glasses,
 .demo-mole.spy .spy-glasses { display: flex; }
 .spy-glasses:before,
 .spy-glasses:after{
